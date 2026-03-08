@@ -2,12 +2,11 @@ package com.dmzkiaddon.network.packets;
 
 import com.dmzkiaddon.AddonConfig;
 import com.dmzkiaddon.KiGriefingHelper;
-import com.dmzkiaddon.entity.KiBlastAddon;
 import com.dmzkiaddon.entity.KiLaserAddon;
 import com.dmzkiaddon.entity.KiWaveAddon;
 import com.dmzkiaddon.entity.MakankosappoEntity;
+import com.dragonminez.common.init.entities.ki.KiBlastEntity;
 import com.dragonminez.common.init.entities.ki.KiDiscEntity;
-import com.dragonminez.common.init.entities.ki.KiLaserEntity;
 import com.dragonminez.common.stats.Character;
 import com.dragonminez.common.stats.*;
 import net.minecraft.network.FriendlyByteBuf;
@@ -57,7 +56,6 @@ public class FireKiAttackC2S {
             if (player == null) return;
 
             StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(stats -> {
-                // Apply config multiplier to base cost
                 int baseCost = AddonConfig.getCost(packet.attackType);
                 fireAttack(packet.attackType, player,
                         baseCost,
@@ -145,31 +143,29 @@ public class FireKiAttackC2S {
                     level.addFreshEntity(waveYellow);
                 }
 
-                // ── PROJECTILES ──────────────────────────────────────────────────────
-                case KI_DISC -> {
-                    KiDiscEntity disc = new KiDiscEntity(level, player);
-                    disc.setColors(0xFF44FF, colorBorder);
-                    disc.setKiDamage(kiDamage);
-                    shootProjectile(disc, player, lookAngle, 2.0f);
-                    level.addFreshEntity(disc);
-                    player.playSound(com.dmzkiaddon.ModSounds.DISC_FIRE.get(), 0.6f, 1.0f);
-                }
+                // ── KI_LASER — beam tipo KiLaser (no proyectil volador) ─────────────
+                // KiLaserAddon extiende KiLaserEntity, que es un beam igual que KiWave.
+                // No se le llama shootProjectile(), ya que tick() zeroea deltaMovement.
                 case KI_LASER -> {
                     KiLaserAddon laser = new KiLaserAddon(level, player);
                     laser.setColors(0x00FFFF, colorBorder);
                     laser.setKiDamage(kiDamage * 0.6f);
+                    laser.setKiSpeed(2.0f);
                     laser.setExplosionInteraction(KiGriefingHelper.getExplosionMode(
                             level, player.getX(), player.getY(), player.getZ(), player));
                     level.addFreshEntity(laser);
-                    player.playSound(com.dmzkiaddon.ModSounds.BASICBEAM_FIRE.get(), 0.6f, 1.0f);
                 }
+
+                // ── PROYECTILES — usan KiBlastEntity del DMZ directamente ────────────
+                // KiBlastEntity ya tiene onHitEntity(), pulseAreaDamage(), explodeAndDie()
+                // con MainGameRules.canKiGrief() integrado. No necesitamos wrapper.
                 case KI_VOLLEY -> {
                     for (int i = 0; i < 5; i++) {
                         double spreadX = (Math.random() - 0.5) * 0.2;
                         double spreadY = (Math.random() - 0.5) * 0.2;
                         double spreadZ = (Math.random() - 0.5) * 0.2;
                         Vec3 dir = lookAngle.add(spreadX, spreadY, spreadZ);
-                        KiBlastAddon blast = new KiBlastAddon(level, player, KiBlastAddon.SoundType.GENERIC);
+                        KiBlastEntity blast = new KiBlastEntity(level, player);
                         blast.setColors(0x44FFFF, colorBorder);
                         blast.setKiDamage(kiDamage * 0.3f);
                         blast.setSize(0.5f);
@@ -178,15 +174,16 @@ public class FireKiAttackC2S {
                     }
                 }
                 case SPIRIT_BOMB -> {
-                    KiBlastAddon spirit = new KiBlastAddon(level, player, KiBlastAddon.SoundType.SPIRIT_BOMB);
+                    KiBlastEntity spirit = new KiBlastEntity(level, player);
                     spirit.setColors(0x88BBFF, colorBorder);
-                    spirit.setKiDamage(kiDamage * 2.5f * charge);
+                    // Spirit Bomb sin carga no tiene sentido — mínimo 0.1f para que no sea 0 daño
+                    spirit.setKiDamage(kiDamage * 2.0f * Math.max(charge, 0.1f));
                     spirit.setSize(sizeMult * 2f);
                     shootProjectile(spirit, player, lookAngle, 1.0f);
                     level.addFreshEntity(spirit);
                 }
                 case BIG_BANG -> {
-                    KiBlastAddon bigBang = new KiBlastAddon(level, player, KiBlastAddon.SoundType.BIG_BANG);
+                    KiBlastEntity bigBang = new KiBlastEntity(level, player);
                     bigBang.setColors(0xFFFFFF, colorBorder);
                     bigBang.setKiDamage(kiDamage * 1.8f);
                     bigBang.setSize(sizeMult * 1.5f);
@@ -194,7 +191,7 @@ public class FireKiAttackC2S {
                     level.addFreshEntity(bigBang);
                 }
                 case DEATH_BALL -> {
-                    KiBlastAddon dball = new KiBlastAddon(level, player, KiBlastAddon.SoundType.DEATH_BALL);
+                    KiBlastEntity dball = new KiBlastEntity(level, player);
                     dball.setColors(0xCC0022, colorBorder);
                     dball.setKiDamage(kiDamage * 2.0f);
                     dball.setSize(sizeMult * 1.8f);
@@ -202,19 +199,29 @@ public class FireKiAttackC2S {
                     level.addFreshEntity(dball);
                 }
                 case DODOMPA -> {
-                    KiBlastAddon dodompa = new KiBlastAddon(level, player, KiBlastAddon.SoundType.GENERIC);
+                    // Dodompa: beam rosado cargado (usa KiLaserAddon como el Ki Laser,
+                    // pero más lento y con más daño — estilo disparo de dedo)
+                    KiLaserAddon dodompa = new KiLaserAddon(level, player);
                     dodompa.setColors(0xFF44BB, colorBorder);
                     dodompa.setKiDamage(kiDamage * 0.8f);
-                    dodompa.setSize(sizeMult * 0.7f);
-                    shootProjectile(dodompa, player, lookAngle, 2.0f);
+                    dodompa.setKiSpeed(1.2f);
+                    dodompa.setExplosionInteraction(KiGriefingHelper.getExplosionMode(
+                            level, player.getX(), player.getY(), player.getZ(), player));
                     level.addFreshEntity(dodompa);
+                }
+                case KI_DISC -> {
+                    KiDiscEntity disc = new KiDiscEntity(level, player);
+                    disc.setColors(0xFF44FF, colorBorder);
+                    disc.setKiDamage(kiDamage);
+                    shootProjectile(disc, player, lookAngle, 2.0f);
+                    level.addFreshEntity(disc);
+                    player.playSound(com.dmzkiaddon.ModSounds.DISC_FIRE.get(), 0.6f, 1.0f);
                 }
                 case MAKANKOSAPPO -> {
                     MakankosappoEntity beam = new MakankosappoEntity(level, player);
                     beam.setKiDamage(kiDamage * 1.3f);
                     beam.setSize(sizeMult * 0.7f);
                     beam.setKiSpeed(2.5f);
-                    shootProjectile(beam, player, lookAngle, 2.5f);
                     level.addFreshEntity(beam);
                     player.playSound(com.dmzkiaddon.ModSounds.BASICBEAM_FIRE.get(), 0.6f, 0.8f);
                 }
@@ -229,41 +236,21 @@ public class FireKiAttackC2S {
                         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, slowDuration,  2, false, false));
                     }
                 }
-                // Manejados por sus propios packets, nunca deberían llegar aquí
-                case HELLZONE, HAKAI -> { /* handled by dedicated packets */ }
+                // Manejados por sus propios packets
+                case HELLZONE, HAKAI -> {}
             }
         });
     }
 
     /**
-     * Shoots a flying projectile (KiBlast, KiDisc, KiLaser, Makankosappo).
+     * Posiciona y lanza un proyectil volador desde la posición de los ojos del jugador.
+     * NO usar para beams (KiWaveAddon, KiLaserAddon) — esos se posicionan en su constructor.
      */
     private static void shootProjectile(Projectile proj, ServerPlayer player, Vec3 direction, float speed) {
         Vec3 spawnPos = player.getEyePosition().add(direction.normalize().scale(0.5));
         proj.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
         proj.setOwner(player);
         proj.shoot(direction.x, direction.y, direction.z, speed, 0f);
-    }
-
-    private static int getAttackCost(AttackType type) {
-        return switch (type) {
-            case KI_LASER         -> 10;
-            case DODOMPA          -> 10;
-            case KI_VOLLEY        -> 20;
-            case MASENKO          -> 30;
-            case GALICK_GUN       -> 40;
-            case KAMEHAMEHA       -> 40;
-            case KI_DISC          -> 30;
-            case MAKANKOSAPPO     -> 50;
-            case TAIYOKEN         -> 20;
-            case BIG_BANG         -> 60;
-            case SPIRIT_BOMB      -> 80;
-            case DEATH_BALL       -> 70;
-            case FINAL_FLASH      -> 70;
-            case FINAL_KAMEHAMEHA -> 100;
-            case HELLZONE         -> 50;
-            case HAKAI            -> 100;
-        };
     }
 
     private static int getPlayerKiColor(StatsData stats) {
