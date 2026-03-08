@@ -1,7 +1,7 @@
 package com.dmzkiaddon.client;
 
-import com.dmzkiaddon.AddonConfig;
-import com.dmzkiaddon.AttackRegistry.KiAttackEntry;
+import com.dmzkiaddon.config.AddonConfig;
+import com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry;
 import com.dmzkiaddon.network.AddonNetworkHandler;
 import com.dmzkiaddon.network.packets.FireKiAttackC2S;
 import com.dmzkiaddon.network.packets.FireKiAttackC2S.AttackType;

@@ -1,4 +1,4 @@
-package com.dmzkiaddon;
+package com.dmzkiaddon.registry;
 
 import com.dmzkiaddon.network.packets.FireKiAttackC2S.AttackType;
 import java.util.*;

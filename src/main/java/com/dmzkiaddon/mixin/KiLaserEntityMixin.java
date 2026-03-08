@@ -1,6 +1,6 @@
 package com.dmzkiaddon.mixin;
 
-import com.dmzkiaddon.KiGriefingHelper;
+import com.dmzkiaddon.compat.KiGriefingHelper;
 import com.dmzkiaddon.entity.KiLaserAddon;
 import com.dragonminez.common.init.MainDamageTypes;
 import com.dragonminez.common.init.entities.ki.KiLaserEntity;

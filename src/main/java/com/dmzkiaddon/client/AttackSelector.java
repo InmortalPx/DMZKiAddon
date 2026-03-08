@@ -1,7 +1,7 @@
 package com.dmzkiaddon.client;
 
-import com.dmzkiaddon.AttackRegistry;
-import com.dmzkiaddon.AttackRegistry.KiAttackEntry;
+import com.dmzkiaddon.registry.AttackRegistry;
+import com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry;
 import com.dragonminez.common.stats.StatsCapability;
 import com.dragonminez.common.stats.StatsProvider;
 import net.minecraft.client.Minecraft;

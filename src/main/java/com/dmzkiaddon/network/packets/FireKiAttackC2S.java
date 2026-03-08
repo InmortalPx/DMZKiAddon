@@ -1,10 +1,11 @@
 package com.dmzkiaddon.network.packets;
 
-import com.dmzkiaddon.AddonConfig;
-import com.dmzkiaddon.KiGriefingHelper;
+import com.dmzkiaddon.config.AddonConfig;
+import com.dmzkiaddon.compat.KiGriefingHelper;
 import com.dmzkiaddon.entity.KiLaserAddon;
 import com.dmzkiaddon.entity.KiWaveAddon;
 import com.dmzkiaddon.entity.MakankosappoEntity;
+import com.dmzkiaddon.registry.ModSounds;
 import com.dragonminez.common.init.entities.ki.KiBlastEntity;
 import com.dragonminez.common.init.entities.ki.KiDiscEntity;
 import com.dragonminez.common.stats.Character;
@@ -77,12 +78,16 @@ public class FireKiAttackC2S {
 
             Level level = player.level();
             Vec3 lookAngle = player.getLookAngle();
-            float damageMult = 1f + charge;
-            float sizeMult   = 1f + charge * 0.5f;
-            float kiDamage   = (float)(stats.getKiDamage() * damageMult);
+            float damageMult   = 1f + charge;
+            float sizeMult     = 1f + charge * 0.5f;
+
+            // Damage now scales with getKiDamage() which already includes:
+            //   PWR stat + form multipliers + power release
+            // damage_scale from config adjusts the final value per attack.
+            float kiDamage = (float) stats.getKiDamage() * damageMult * AddonConfig.getDamageScale(type);
 
             switch (type) {
-                // ── BEAMS (KiWaveAddon) ──────────────────────────────────────────────
+                // ── BEAMS (KiWaveAddon) ──────────────────────────────────────────
                 case KAMEHAMEHA -> {
                     KiWaveAddon wave = new KiWaveAddon(level, player, KiWaveAddon.SoundType.KAMEHAMEHA);
                     wave.setColors(0x2266FF, colorBorder);
@@ -143,9 +148,7 @@ public class FireKiAttackC2S {
                     level.addFreshEntity(waveYellow);
                 }
 
-                // ── KI_LASER — beam tipo KiLaser (no proyectil volador) ─────────────
-                // KiLaserAddon extiende KiLaserEntity, que es un beam igual que KiWave.
-                // No se le llama shootProjectile(), ya que tick() zeroea deltaMovement.
+                // ── BEAMS (KiLaserAddon) ─────────────────────────────────────────
                 case KI_LASER -> {
                     KiLaserAddon laser = new KiLaserAddon(level, player);
                     laser.setColors(0x00FFFF, colorBorder);
@@ -155,10 +158,19 @@ public class FireKiAttackC2S {
                             level, player.getX(), player.getY(), player.getZ(), player));
                     level.addFreshEntity(laser);
                 }
+                case DODOMPA -> {
+                    KiLaserAddon dodompa = new KiLaserAddon(level, player);
+                    dodompa.setColors(0xFF44BB, colorBorder);
+                    dodompa.setKiDamage(kiDamage * 0.8f);
+                    dodompa.setKiSpeed(1.2f);
+                    dodompa.setExplosionInteraction(KiGriefingHelper.getExplosionMode(
+                            level, player.getX(), player.getY(), player.getZ(), player));
+                    level.addFreshEntity(dodompa);
+                }
 
-                // ── PROYECTILES — usan KiBlastEntity del DMZ directamente ────────────
-                // KiBlastEntity ya tiene onHitEntity(), pulseAreaDamage(), explodeAndDie()
-                // con MainGameRules.canKiGrief() integrado. No necesitamos wrapper.
+                // ── PROJECTILES (KiBlastEntity from DMZ) ────────────────────────
+                // KiBlastEntity already has onHitEntity(), pulseAreaDamage() and
+                // explodeAndDie() with MainGameRules.canKiGrief() built in.
                 case KI_VOLLEY -> {
                     for (int i = 0; i < 5; i++) {
                         double spreadX = (Math.random() - 0.5) * 0.2;
@@ -176,7 +188,6 @@ public class FireKiAttackC2S {
                 case SPIRIT_BOMB -> {
                     KiBlastEntity spirit = new KiBlastEntity(level, player);
                     spirit.setColors(0x88BBFF, colorBorder);
-                    // Spirit Bomb sin carga no tiene sentido — mínimo 0.1f para que no sea 0 daño
                     spirit.setKiDamage(kiDamage * 2.0f * Math.max(charge, 0.1f));
                     spirit.setSize(sizeMult * 2f);
                     shootProjectile(spirit, player, lookAngle, 1.0f);
@@ -198,24 +209,15 @@ public class FireKiAttackC2S {
                     shootProjectile(dball, player, lookAngle, 1.1f);
                     level.addFreshEntity(dball);
                 }
-                case DODOMPA -> {
-                    // Dodompa: beam rosado cargado (usa KiLaserAddon como el Ki Laser,
-                    // pero más lento y con más daño — estilo disparo de dedo)
-                    KiLaserAddon dodompa = new KiLaserAddon(level, player);
-                    dodompa.setColors(0xFF44BB, colorBorder);
-                    dodompa.setKiDamage(kiDamage * 0.8f);
-                    dodompa.setKiSpeed(1.2f);
-                    dodompa.setExplosionInteraction(KiGriefingHelper.getExplosionMode(
-                            level, player.getX(), player.getY(), player.getZ(), player));
-                    level.addFreshEntity(dodompa);
-                }
+
+                // ── OTHER ────────────────────────────────────────────────────────
                 case KI_DISC -> {
                     KiDiscEntity disc = new KiDiscEntity(level, player);
                     disc.setColors(0xFF44FF, colorBorder);
                     disc.setKiDamage(kiDamage);
                     shootProjectile(disc, player, lookAngle, 2.0f);
                     level.addFreshEntity(disc);
-                    player.playSound(com.dmzkiaddon.ModSounds.DISC_FIRE.get(), 0.6f, 1.0f);
+                    player.playSound(ModSounds.DISC_FIRE.get(), 0.6f, 1.0f);
                 }
                 case MAKANKOSAPPO -> {
                     MakankosappoEntity beam = new MakankosappoEntity(level, player);
@@ -223,7 +225,7 @@ public class FireKiAttackC2S {
                     beam.setSize(sizeMult * 0.7f);
                     beam.setKiSpeed(2.5f);
                     level.addFreshEntity(beam);
-                    player.playSound(com.dmzkiaddon.ModSounds.BASICBEAM_FIRE.get(), 0.6f, 0.8f);
+                    player.playSound(ModSounds.BASICBEAM_FIRE.get(), 0.6f, 0.8f);
                 }
                 case TAIYOKEN -> {
                     AABB area = player.getBoundingBox().inflate(10.0);
@@ -236,15 +238,15 @@ public class FireKiAttackC2S {
                         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, slowDuration,  2, false, false));
                     }
                 }
-                // Manejados por sus propios packets
+                // Handled by their own dedicated packets
                 case HELLZONE, HAKAI -> {}
             }
         });
     }
 
     /**
-     * Posiciona y lanza un proyectil volador desde la posición de los ojos del jugador.
-     * NO usar para beams (KiWaveAddon, KiLaserAddon) — esos se posicionan en su constructor.
+     * Positions and launches a flying projectile from the player's eye position.
+     * Do NOT use for beams (KiWaveAddon, KiLaserAddon) — those position themselves in their constructor.
      */
     private static void shootProjectile(Projectile proj, ServerPlayer player, Vec3 direction, float speed) {
         Vec3 spawnPos = player.getEyePosition().add(direction.normalize().scale(0.5));

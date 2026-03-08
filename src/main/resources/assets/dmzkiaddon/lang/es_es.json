@@ -8,8 +8,10 @@
   "key.dmzkiaddon.hakai_spam": "Hakai (Machar)",
   "key.dmzkiaddon.taiyoken": "Taiyoken",
   "key.dmzkiaddon.hakai": "Hakai (Activar)",
+
   "gui.dmzkiaddon.no_attacks": "Sin Técnicas Registradas",
   "gui.dmzkiaddon.learn_from_master": "Entrena con un Maestro para aprender",
+
   "skill.dragonminez.addon_ki_laser": "Rayo Ki",
   "skill.dragonminez.addon_ki_laser.desc": "Dispara un rayo de energía Ki de alta velocidad. Bajo costo, ideal para combate rápido.",
   "skill.dragonminez.addon_dodompa": "Dodompa",
@@ -42,15 +44,18 @@
   "skill.dragonminez.addon_final_kamehameha.desc": "La técnica suprema de Gogeta. Fusiona el Kamehameha azul y el Flash Final dorado en un solo haz devastador.",
   "skill.dragonminez.addon_hakai": "Hakai",
   "skill.dragonminez.addon_hakai.desc": "El poder de destrucción absoluta de un Dios. Pulveriza la existencia misma del objetivo. Técnica de Beerus.",
+
   "command.dmzkiaddon.reload.success": "§a[DMZKiAddon] Configuración recargada correctamente.",
   "command.dmzkiaddon.reload.fail": "§c[DMZKiAddon] Error al recargar la configuración: %s",
+  "command.dmzkiaddon.give.success": "§a[DMZKiAddon] §fAtaque §e%s §fotorgado a §e%s§f.",
+  "command.dmzkiaddon.give.success_multiple": "§a[DMZKiAddon] §fAtaque §e%s §fotorgado a §e%d §fjugadores.",
+  "command.dmzkiaddon.remove.success": "§a[DMZKiAddon] §fAtaque §e%s §fremovido de §e%s§f.",
+  "command.dmzkiaddon.remove.success_multiple": "§a[DMZKiAddon] §fAtaque §e%s §fremovido de §e%d §fjugadores.",
+  "command.dmzkiaddon.attack.unknown": "§c[DMZKiAddon] Ataque Ki desconocido: %s",
+  "command.dmzkiaddon.attack.all": "todos los ataques",
+
   "msg.dmzkiaddon.cooldown_label": " en cooldown: ",
   "msg.dmzkiaddon.attack_selected": "Ataque seleccionado: ",
   "msg.dmzkiaddon.hakai_no_target": "Hakai: necesitas un objetivo (lock-on)",
-  "msg.dmzkiaddon.taiyoken_no_skill": "Aún no has aprendido el Taiyoken.",
-  "command.dmzkiaddon.give.success": "§a[DMZKiAddon] §fAtaque §e%s §fotorgado a §e%s§f.",
-  "command.dmzkiaddon.give.success_multiple": "§a[DMZKiAddon] §fAtaque §e%s §fotorgado a §e%d §fjugadores.",
-  "command.dmzkiaddon.set.success": "§a[DMZKiAddon] §fAtaque §e%s §festablecido al nivel §e%d §fpara §e%s§f.",
-  "command.dmzkiaddon.set.success_multiple": "§a[DMZKiAddon] §fAtaque §e%s §festablecido al nivel §e%d §fpara §e%d §fjugadores.",
-  "command.dmzkiaddon.attack.unknown": "§c[DMZKiAddon] Ataque Ki desconocido: %s"
+  "msg.dmzkiaddon.taiyoken_no_skill": "Aún no has aprendido el Taiyoken."
 }

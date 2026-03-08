@@ -1,5 +1,6 @@
 package com.dmzkiaddon.mixin;
 
+import com.dmzkiaddon.config.AddonConfig;
 import com.dragonminez.common.config.SkillsConfig;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -9,57 +10,122 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.*;
 
 /**
- * Injects the addon's skill IDs and costs into DragonMineZ's SkillsConfig
- * so they are recognized as valid Ki skills in the base mod's systems.
+ * Injects the addon's Ki skills and TP costs into DragonMineZ's SkillsConfig in memory.
+ *
+ * NOTE: getKiSkills() injection has been intentionally REMOVED.
+ * Injecting addon skills into getKiSkills() globally caused them to appear
+ * in the V-menu and skill HUD even before the player had learned them.
+ * Skills are recognized as Ki-type at execution time via the "addon_" prefix check
+ * in the attack handler directly.
  */
 @Mixin(value = SkillsConfig.class, remap = false)
 public class SkillsConfigMixin {
 
-    private static final Map<String, Integer> ADDON_COSTS = new LinkedHashMap<>();
+    private static final List<String> ADDON_SKILL_IDS = List.of(
+            "addon_ki_laser",
+            "addon_dodompa",
+            "addon_ki_volley",
+            "addon_masenko",
+            "addon_galick_gun",
+            "addon_kamehameha",
+            "addon_ki_disc",
+            "addon_makankosappo",
+            "addon_taiyoken",
+            "addon_big_bang",
+            "addon_spirit_bomb",
+            "addon_death_ball",
+            "addon_hellzone",
+            "addon_final_flash",
+            "addon_final_kamehameha",
+            "addon_hakai"
+    );
 
-    static {
-        ADDON_COSTS.put("addon_ki_laser",         10);
-        ADDON_COSTS.put("addon_dodompa",          10);
-        ADDON_COSTS.put("addon_ki_volley",        20);
-        ADDON_COSTS.put("addon_masenko",          30);
-        ADDON_COSTS.put("addon_galick_gun",       40);
-        ADDON_COSTS.put("addon_kamehameha",       40);
-        ADDON_COSTS.put("addon_ki_disc",          30);
-        ADDON_COSTS.put("addon_makankosappo",     50);
-        ADDON_COSTS.put("addon_taiyoken",         20);
-        ADDON_COSTS.put("addon_big_bang",         60);
-        ADDON_COSTS.put("addon_spirit_bomb",      80);
-        ADDON_COSTS.put("addon_death_ball",       70);
-        ADDON_COSTS.put("addon_hellzone",         50);
-        ADDON_COSTS.put("addon_final_flash",      70);
-        ADDON_COSTS.put("addon_final_kamehameha", 100);
-        ADDON_COSTS.put("addon_hakai",            100);
+    /**
+     * Intercepts getSkills() so that MastersSkillsScreen.getUpgradeCost()
+     * can find the TP cost for addon skills via skillConfig.getSkills().get(skillName).
+     */
+    @Inject(method = "getSkills", at = @At("RETURN"), cancellable = true)
+    private void injectAddonSkillsIntoMap(CallbackInfoReturnable<Map<String, SkillsConfig.SkillCosts>> cir) {
+        Map<String, SkillsConfig.SkillCosts> original = cir.getReturnValue();
+
+        boolean needsInjection = false;
+        for (String id : ADDON_SKILL_IDS) {
+            if (!original.containsKey(id)) {
+                needsInjection = true;
+                break;
+            }
+        }
+        if (!needsInjection) return;
+
+        Map<String, SkillsConfig.SkillCosts> extended = new HashMap<>(original);
+        Map<String, Integer> tpCosts = AddonConfig.getAllTpCosts();
+
+        for (String skillId : ADDON_SKILL_IDS) {
+            if (!extended.containsKey(skillId)) {
+                Integer cost = tpCosts.get(skillId);
+                if (cost != null) {
+                    extended.put(skillId, new SkillsConfig.SkillCosts(
+                            Collections.singletonList(cost)));
+                }
+            }
+        }
+
+        cir.setReturnValue(extended);
     }
 
+    /**
+     * Belt-and-suspenders: also intercept getSkillCosts() directly.
+     */
     @Inject(method = "getSkillCosts", at = @At("RETURN"), cancellable = true)
     private void injectAddonSkillCosts(String skillName,
-                                        CallbackInfoReturnable<SkillsConfig.SkillCosts> cir) {
+                                       CallbackInfoReturnable<SkillsConfig.SkillCosts> cir) {
         String lower = skillName.toLowerCase();
-        if (ADDON_COSTS.containsKey(lower)) {
-            SkillsConfig.SkillCosts existing = cir.getReturnValue();
-            if (existing == null || existing.getCosts().isEmpty()) {
-                Integer cost = ADDON_COSTS.get(lower);
-                cir.setReturnValue(new SkillsConfig.SkillCosts(
-                        Collections.singletonList(cost)));
-            }
+        if (!ADDON_SKILL_IDS.contains(lower)) return;
+
+        SkillsConfig.SkillCosts existing = cir.getReturnValue();
+        if (existing != null && !existing.getCosts().isEmpty()) return;
+
+        Map<String, Integer> tpCosts = AddonConfig.getAllTpCosts();
+        Integer cost = tpCosts.get(lower);
+        if (cost != null) {
+            cir.setReturnValue(new SkillsConfig.SkillCosts(
+                    Collections.singletonList(cost)));
         }
     }
 
-    @Inject(method = "getKiSkills", at = @At("RETURN"), cancellable = true)
-    private void injectKiSkillIds(CallbackInfoReturnable<List<String>> cir) {
-        List<String> list = new ArrayList<>(cir.getReturnValue());
+    /**
+     * Intercepts getSkillOfferings() — injects addon skills per master.
+     */
+    @Inject(method = "getSkillOfferings", at = @At("RETURN"), cancellable = true)
+    private void injectSkillOfferings(CallbackInfoReturnable<Map<String, List<String>>> cir) {
+        Map<String, List<String>> offerings = new LinkedHashMap<>(cir.getReturnValue());
         boolean changed = false;
-        for (String key : ADDON_COSTS.keySet()) {
-            if (!list.contains(key)) {
-                list.add(key);
-                changed = true;
+
+        Map<String, List<String>> addonOfferings = Map.of(
+                "goku",    List.of("addon_ki_laser", "addon_ki_volley",
+                        "addon_kamehameha", "addon_spirit_bomb",
+                        "addon_final_kamehameha", "addon_hakai"),
+                "kingkai", List.of("addon_dodompa", "addon_masenko", "addon_taiyoken"),
+                "roshi",   List.of("addon_ki_disc", "addon_galick_gun", "addon_makankosappo",
+                        "addon_big_bang", "addon_death_ball",
+                        "addon_hellzone", "addon_final_flash")
+        );
+
+        for (Map.Entry<String, List<String>> entry : addonOfferings.entrySet()) {
+            String master = entry.getKey();
+            List<String> masterList = offerings.containsKey(master)
+                    ? new ArrayList<>(offerings.get(master))
+                    : new ArrayList<>();
+
+            for (String skill : entry.getValue()) {
+                if (!masterList.contains(skill)) {
+                    masterList.add(skill);
+                    changed = true;
+                }
             }
+            offerings.put(master, masterList);
         }
-        if (changed) cir.setReturnValue(list);
+
+        if (changed) cir.setReturnValue(offerings);
     }
 }

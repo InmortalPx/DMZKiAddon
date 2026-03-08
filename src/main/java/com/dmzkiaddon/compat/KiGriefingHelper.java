@@ -1,4 +1,4 @@
-package com.dmzkiaddon;
+package com.dmzkiaddon.compat;
 
 import com.dragonminez.common.init.MainGameRules;
 import net.minecraft.core.BlockPos;

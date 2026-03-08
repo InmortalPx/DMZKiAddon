@@ -1,10 +1,9 @@
 package com.dmzkiaddon.entity;
 
-import com.dmzkiaddon.ModSounds;
+import com.dmzkiaddon.registry.ModSounds;
 import com.dragonminez.common.init.MainEntities;
 import com.dragonminez.common.init.entities.ki.KiWaveEntity;
 import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -17,11 +16,12 @@ public class KiWaveAddon extends KiWaveEntity {
 
     public enum SoundType { KAMEHAMEHA, GALICK_GUN, FINAL_FLASH }
 
-    /**
-     * Controls whether this wave's explosion destroys blocks.
-     * Set from KiGriefingHelper before adding the entity to the world.
-     * Default: MOB (vanilla Ki behavior). Set to NONE when gamerule is false.
-     */
+    // ── Caché estático de accessors — se resuelve una sola vez en toda la sesión ──
+    // Esto elimina el delay del primer lanzamiento causado por reflection en caliente.
+    private static EntityDataAccessor<Float> CACHED_YAW_ACCESSOR   = null;
+    private static EntityDataAccessor<Float> CACHED_PITCH_ACCESSOR  = null;
+    private static boolean reflectionResolved = false;
+
     private Level.ExplosionInteraction explosionInteraction = Level.ExplosionInteraction.MOB;
 
     public void setExplosionInteraction(Level.ExplosionInteraction mode) {
@@ -63,50 +63,78 @@ public class KiWaveAddon extends KiWaveEntity {
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked"})
     private void setFixedRotation(float yaw, float pitch) {
+        // Si ya resolvimos los accessors en una instancia anterior, reutilizarlos
+        if (!reflectionResolved) {
+            resolveAccessors();
+        }
+
+        if (CACHED_YAW_ACCESSOR != null && CACHED_PITCH_ACCESSOR != null) {
+            this.entityData.set(CACHED_YAW_ACCESSOR, yaw);
+            this.entityData.set(CACHED_PITCH_ACCESSOR, pitch);
+        } else {
+            com.dmzkiaddon.DMZKiAddon.LOGGER.warn(
+                    "KiWaveAddon: FIXED_YAW/PITCH accessors not found — beam direction may be wrong");
+        }
+    }
+
+    /**
+     * Resuelve los EntityDataAccessors de FIXED_YAW y FIXED_PITCH de KiWaveEntity
+     * y los guarda en caché estático. Solo se ejecuta una vez por sesión de juego.
+     *
+     * KiWaveEntity define 3 EntityDataAccessors en orden:
+     *   index 0 → BEAM_LENGTH (Float)
+     *   index 1 → FIXED_YAW   (Float)  ← queremos este
+     *   index 2 → FIXED_PITCH  (Float)  ← y este
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static synchronized void resolveAccessors() {
+        if (reflectionResolved) return; // double-check dentro del synchronized
+
         try {
             Class<?> clazz = KiWaveEntity.class;
-            Field fixedYawField   = null;
-            Field fixedPitchField = null;
+
+            // Intento 1: buscar por nombre (mappings oficiales)
+            Field yawField   = null;
+            Field pitchField = null;
 
             for (Field f : clazz.getDeclaredFields()) {
                 f.setAccessible(true);
                 if (f.getType() == EntityDataAccessor.class) {
                     String name = f.getName();
-                    if (name.equals("FIXED_YAW")) {
-                        fixedYawField = f;
-                    } else if (name.equals("FIXED_PITCH")) {
-                        fixedPitchField = f;
+                    if (name.equals("FIXED_YAW"))   yawField   = f;
+                    if (name.equals("FIXED_PITCH"))  pitchField = f;
+                }
+            }
+
+            if (yawField != null && pitchField != null) {
+                CACHED_YAW_ACCESSOR   = (EntityDataAccessor<Float>) yawField.get(null);
+                CACHED_PITCH_ACCESSOR = (EntityDataAccessor<Float>) pitchField.get(null);
+            } else {
+                // Intento 2: fallback por posición ordinal
+                // KiWaveEntity: BEAM_LENGTH(1er), FIXED_YAW(2do), FIXED_PITCH(3er)
+                int count = 0;
+                for (Field f : clazz.getDeclaredFields()) {
+                    f.setAccessible(true);
+                    if (f.getType() == EntityDataAccessor.class) {
+                        count++;
+                        if (count == 2) CACHED_YAW_ACCESSOR   = (EntityDataAccessor<Float>) f.get(null);
+                        if (count == 3) CACHED_PITCH_ACCESSOR  = (EntityDataAccessor<Float>) f.get(null);
                     }
                 }
             }
 
-            if (fixedYawField != null && fixedPitchField != null) {
-                EntityDataAccessor<Float> yawAccessor   = (EntityDataAccessor<Float>) fixedYawField.get(null);
-                EntityDataAccessor<Float> pitchAccessor = (EntityDataAccessor<Float>) fixedPitchField.get(null);
-                this.entityData.set(yawAccessor, yaw);
-                this.entityData.set(pitchAccessor, pitch);
+            if (CACHED_YAW_ACCESSOR != null && CACHED_PITCH_ACCESSOR != null) {
+                com.dmzkiaddon.DMZKiAddon.LOGGER.info("KiWaveAddon: FIXED_YAW/PITCH accessors cached successfully");
             } else {
-                // Fallback por orden: BEAM_LENGTH(0), FIXED_YAW(1), FIXED_PITCH(2)
-                Field[] fields = clazz.getDeclaredFields();
-                int accessorCount = 0;
-                for (Field f : fields) {
-                    f.setAccessible(true);
-                    if (f.getType() == EntityDataAccessor.class) {
-                        accessorCount++;
-                        if (accessorCount == 2) {
-                            EntityDataAccessor<Float> acc = (EntityDataAccessor<Float>) f.get(null);
-                            this.entityData.set(acc, yaw);
-                        } else if (accessorCount == 3) {
-                            EntityDataAccessor<Float> acc = (EntityDataAccessor<Float>) f.get(null);
-                            this.entityData.set(acc, pitch);
-                        }
-                    }
-                }
+                com.dmzkiaddon.DMZKiAddon.LOGGER.error("KiWaveAddon: Could not find FIXED_YAW/PITCH accessors");
             }
+
         } catch (Exception e) {
-            com.dmzkiaddon.DMZKiAddon.LOGGER.warn("KiWaveAddon: Could not set FIXED_YAW/PITCH via reflection: {}", e.getMessage());
+            com.dmzkiaddon.DMZKiAddon.LOGGER.error("KiWaveAddon: reflection failed: {}", e.getMessage());
+        } finally {
+            reflectionResolved = true; // no volver a intentarlo aunque falle
         }
     }
 }

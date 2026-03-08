@@ -6,6 +6,7 @@ import com.dragonminez.common.stats.StatsCapability;
 import com.dragonminez.common.stats.StatsProvider;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,10 +28,9 @@ public class HakaiHandler {
     private static final Map<UUID, PlayerHakaiData> PLAYER_HAKAI = new HashMap<>();
 
     public static void startNpcHakai(ServerPlayer attacker, LivingEntity target) {
-        // No aplicar Hakai a maestros
         if (target instanceof MastersEntity) return;
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, NPC_HAKAI_DURATION, 10, false, false));
-        NPC_HAKAI.put(attacker.getUUID(), new NpcHakaiData(target));
+        NPC_HAKAI.put(attacker.getUUID(), new NpcHakaiData(target, attacker));
     }
 
     public static boolean startPlayerHakai(ServerPlayer attacker, ServerPlayer defender) {
@@ -84,7 +84,8 @@ public class HakaiHandler {
         }
     }
 
-    private static void finishMinigame(PlayerHakaiData data, boolean attackerWon, net.minecraft.server.MinecraftServer server) {
+    private static void finishMinigame(PlayerHakaiData data, boolean attackerWon,
+                                       net.minecraft.server.MinecraftServer server) {
         ServerPlayer attacker = server.getPlayerList().getPlayer(data.attackerId);
         ServerPlayer defender = server.getPlayerList().getPlayer(data.defenderId);
         ServerPlayer loser = attackerWon ? defender : attacker;
@@ -114,18 +115,29 @@ public class HakaiHandler {
             data.tick++;
             LivingEntity target = data.target;
 
-            if (!target.isAlive() || data.tick >= NPC_HAKAI_DURATION) {
+            if (!target.isAlive() || data.tick > NPC_HAKAI_DURATION) {
                 toRemoveNpc.add(entry.getKey());
                 continue;
             }
 
             if (target.level() instanceof ServerLevel serverLevel) {
                 spawnDivineParticles(serverLevel, target);
-                if (data.tick == NPC_HAKAI_DURATION - 1) {
-                    // No matar maestros
+
+                if (data.tick == NPC_HAKAI_DURATION) {
                     if (!(target instanceof MastersEntity)) {
-                        target.hurt(serverLevel.damageSources().fellOutOfWorld(), Float.MAX_VALUE);
+                        // Use generic damage so mobs with isInvulnerableTo(fellOutOfWorld) don't ignore it
+                        DamageSource dmg = data.attacker != null
+                                ? serverLevel.damageSources().playerAttack(data.attacker)
+                                : serverLevel.damageSources().magic();
+                        // Remove invulnerability ticks so the hit always registers
+                        target.invulnerableTime = 0;
+                        target.hurt(dmg, Float.MAX_VALUE);
+                        // Fallback: if somehow still alive, kill directly
+                        if (target.isAlive()) {
+                            target.kill();
+                        }
                     }
+                    toRemoveNpc.add(entry.getKey());
                 }
             }
         }
@@ -141,7 +153,7 @@ public class HakaiHandler {
     }
 
     private static void spawnDivineParticles(ServerLevel level, LivingEntity entity) {
-        var divineColor = new org.joml.Vector3f(0.9f, 0.85f, 0.5f);
+        var divineColor  = new org.joml.Vector3f(0.9f, 0.85f, 0.5f);
         var divineBright = new net.minecraft.core.particles.DustParticleOptions(divineColor, 1.2f);
         for (int i = 0; i < 6; i++) {
             double angle = (level.getGameTime() + i * 60) * 0.3;
@@ -156,8 +168,12 @@ public class HakaiHandler {
 
     static class NpcHakaiData {
         final LivingEntity target;
+        final ServerPlayer attacker;
         int tick = 0;
-        NpcHakaiData(LivingEntity target) { this.target = target; }
+        NpcHakaiData(LivingEntity target, ServerPlayer attacker) {
+            this.target = target;
+            this.attacker = attacker;
+        }
     }
 
     static class PlayerHakaiData {

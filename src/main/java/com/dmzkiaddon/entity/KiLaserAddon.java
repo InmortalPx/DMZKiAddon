@@ -1,6 +1,6 @@
 package com.dmzkiaddon.entity;
 
-import com.dmzkiaddon.ModSounds;
+import com.dmzkiaddon.registry.ModSounds;
 import com.dragonminez.common.init.MainEntities;
 import com.dragonminez.common.init.entities.ki.KiLaserEntity;
 import net.minecraft.network.syncher.EntityDataAccessor;

@@ -1,5 +1,6 @@
 package com.dmzkiaddon.network.packets;
 
+import com.dmzkiaddon.config.AddonConfig;
 import com.dragonminez.common.stats.*;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,20 +34,26 @@ public class InitiateHakaiC2S {
 
             StatsProvider.get(StatsCapability.INSTANCE, attacker).ifPresent(stats -> {
                 int energy = stats.getResources().getCurrentEnergy();
-                int cost = 100;
+                int cost = AddonConfig.getCost(FireKiAttackC2S.AttackType.HAKAI);
                 if (energy < cost) return;
-                stats.getResources().setCurrentEnergy(energy - cost);
 
                 Entity targetEntity = attacker.level().getEntity(packet.targetEntityId);
                 if (!(targetEntity instanceof LivingEntity target) || !target.isAlive()) return;
 
-                boolean[] sinKi = {true};
+                // Try player minigame first — if target is a player AND minigame started OK,
+                // don't also start the NPC hakai on them.
+                boolean handledAsPlayer = false;
                 if (target instanceof ServerPlayer defender) {
-                    sinKi[0] = HakaiHandler.startPlayerHakai(attacker, defender);
+                    handledAsPlayer = HakaiHandler.startPlayerHakai(attacker, defender);
                 }
-                if (sinKi[0]) {
+
+                if (!handledAsPlayer) {
+                    // Target is a mob, or player minigame couldn't start (already in one)
                     HakaiHandler.startNpcHakai(attacker, target);
                 }
+
+                // Deduct Ki only after confirming the attack actually started
+                stats.getResources().setCurrentEnergy(energy - cost);
             });
         });
         ctx.setPacketHandled(true);

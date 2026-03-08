@@ -2,14 +2,17 @@ package com.dmzkiaddon;
 
 import com.dmzkiaddon.client.KeyHandler;
 import com.dmzkiaddon.client.ScreenEffects;
-import com.dmzkiaddon.command.GiveKiAttackCommand;
+import com.dmzkiaddon.command.KiAddonCommand;
+import com.dmzkiaddon.config.AddonConfig;
 import com.dmzkiaddon.network.AddonNetworkHandler;
+import com.dmzkiaddon.registry.ModSounds;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -40,22 +43,29 @@ public class DMZKiAddon {
             MinecraftForge.EVENT_BUS.register(ScreenEffects.class);
         });
 
-        LOGGER.info(" >> DMZKiAddon");
-        LOGGER.info("");
-        LOGGER.info(" >> Mod hecho por: carlosn2300K");
-        LOGGER.info(" >> Con ayuda de:  Facub8  |  InmortalPx");
-        LOGGER.info(" >> Version: 1.0.0 para DragonMineZ 2.0.2 | Forge 1.20.1");
+        String addonVersion = ModList.get().getModFileById(MOD_ID)
+                .getMods().get(0).getVersion().toString();
+        String dmzVersion = ModList.get().isLoaded("dragonminez")
+                ? ModList.get().getModFileById("dragonminez").getMods().get(0).getVersion().toString()
+                : "unknown";
+        String forgeVersion = net.minecraftforge.versions.forge.ForgeVersion.getVersion();
+
+        LOGGER.info("  ╔══════════════════════════════════════╗");
+        LOGGER.info("  ║       DMZ Ki Addon  v{}           ║", addonVersion);
+        LOGGER.info("  ╠══════════════════════════════════════╣");
+        LOGGER.info("  ║  DragonMineZ : {}                ║", dmzVersion);
+        LOGGER.info("  ║  Forge       : {}            ║", forgeVersion);
+        LOGGER.info("  ╠══════════════════════════════════════╣");
+        LOGGER.info("  ║  By: carlosn2300K                    ║");
+        LOGGER.info("  ║  With: Facub8  |  InmortalPx         ║");
+        LOGGER.info("  ╚══════════════════════════════════════╝");
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            AddonNetworkHandler.register();
-            SkillsConfigPatcher.patch();
-        });
+        event.enqueueWork(AddonNetworkHandler::register);
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
-        // GiveKiAttackCommand incluye /give, /set y /reload en un solo árbol
-        GiveKiAttackCommand.register(event.getDispatcher());
+        KiAddonCommand.register(event.getDispatcher());
     }
 }

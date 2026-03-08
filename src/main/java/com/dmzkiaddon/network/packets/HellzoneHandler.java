@@ -1,6 +1,6 @@
 package com.dmzkiaddon.network.packets;
 
-import com.dmzkiaddon.KiGriefingHelper;
+import com.dmzkiaddon.compat.KiGriefingHelper;
 import com.dmzkiaddon.entity.HellzoneGrenadeEntity;
 import com.dragonminez.common.stats.StatsCapability;
 import com.dragonminez.common.stats.StatsProvider;

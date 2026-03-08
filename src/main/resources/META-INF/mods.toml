@@ -5,7 +5,7 @@ mixins=[{config="dmzkiaddon.mixins.json"}]
 
 [[mods]]
 modId="dmzkiaddon"
-version="1.0.0"
+version="1.1.0"
 displayName="DMZ Ki Attacks Addon"
 authors="carlosn2300k"
 credits="Special thanks to Facub8 and InmortalPx for their support and help during the development of this addon."

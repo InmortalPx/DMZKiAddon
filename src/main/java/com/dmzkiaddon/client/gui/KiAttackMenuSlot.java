@@ -1,6 +1,6 @@
 package com.dmzkiaddon.client.gui;
 
-import com.dmzkiaddon.AttackRegistry.KiAttackEntry;
+import com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry;
 import com.dmzkiaddon.client.AttackSelector;
 import com.dragonminez.client.gui.utilitymenu.AbstractMenuSlot;
 import com.dragonminez.client.gui.utilitymenu.ButtonInfo;
