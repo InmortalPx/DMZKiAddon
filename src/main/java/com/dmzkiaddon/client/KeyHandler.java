@@ -30,8 +30,11 @@ import java.util.Map;
 @OnlyIn(Dist.CLIENT)
 public class KeyHandler {
 
-    private static final int MAX_CHARGE = 100;
-    private static final int MIN_CHARGE = 10;
+    private static final int MAX_CHARGE              = 100;
+    private static final int MIN_CHARGE              = 10;
+    private static final int MAX_GRENADES            = 8;
+    private static final int HELLZONE_SPAWN_INTERVAL = 8;
+    private static final int HELLZONE_MAX_HOLD       = MAX_GRENADES * HELLZONE_SPAWN_INTERVAL;
 
     private static final Map<AttackType, Integer> cooldownMap = new EnumMap<>(AttackType.class);
 
@@ -45,9 +48,10 @@ public class KeyHandler {
     private static boolean prevPrev     = false;
     private static boolean prevKiShield = false;
 
-    private static boolean prevHellzone = false;
-    private static int hellzoneHoldTick = 0;
-    private static int cooldownHellzone = 0;
+    private static boolean prevHellzone   = false;
+    private static int hellzoneHoldTick   = 0;
+    private static int cooldownHellzone   = 0;
+    private static boolean hellzoneActive = false;
 
     private static boolean prevHakaiSpam = false;
     private static boolean prevHakai     = false;
@@ -66,7 +70,6 @@ public class KeyHandler {
         Player player = mc.player;
         ScreenEffects.tick();
 
-        // Tick cooldowns
         for (AttackType type : AttackType.values()) {
             int cd = cooldownMap.getOrDefault(type, 0);
             if (cd > 0) cooldownMap.put(type, cd - 1);
@@ -84,7 +87,6 @@ public class KeyHandler {
         boolean curHakai     = ClientSetup.KEY_HAKAI.isDown();
         boolean curTaiyoken  = ClientSetup.KEY_TAIYOKEN.isDown();
 
-        // Ciclo de ataques
         if (curNext && !prevNext) {
             AttackSelector.selectNext();
             ScreenEffects.stopCharging();
@@ -98,7 +100,6 @@ public class KeyHandler {
             showSelectedAttack(player);
         }
 
-        // Tecla de disparo principal
         KiAttackEntry selected = AttackSelector.getSelected();
         if (selected != null) {
             int cd = getCooldownFor(selected.type());
@@ -143,16 +144,16 @@ public class KeyHandler {
 
         if (!curFire) chargeTick = 0;
 
-        // Ki Shield
         if (curKiShield && !prevKiShield) {
             AddonNetworkHandler.sendToServer(new ToggleKiShieldC2S());
         }
 
-        // Taiyoken
         if (curTaiyoken && !prevTaiyoken) {
             if (hasSkill(player, "addon_taiyoken")) {
                 if (cooldownTaiyoken > 0) {
-                    showCooldownMessage(player, "Taiyoken", cooldownTaiyoken);
+                    showCooldownMessage(player,
+                            Component.translatable("attack.dmzkiaddon.taiyoken").getString(),
+                            cooldownTaiyoken);
                 } else {
                     AddonNetworkHandler.sendToServer(new FireKiAttackC2S(AttackType.TAIYOKEN, 1.0f));
                     cooldownTaiyoken = AddonConfig.getCooldown(AttackType.TAIYOKEN);
@@ -168,37 +169,61 @@ public class KeyHandler {
             }
         }
 
-        // Hellzone Grenade
+        // ── Hellzone Grenade ─────────────────────────────────────────────
         if (hasSkill(player, "addon_hellzone")) {
-            if (curHellzone && !prevHellzone) {
+            if (curHellzone) {
                 if (cooldownHellzone > 0) {
-                    showCooldownMessage(player, "Hellzone Grenade", cooldownHellzone);
+                    if (!prevHellzone) {
+                        showCooldownMessage(player,
+                                Component.translatable("attack.dmzkiaddon.hellzone").getString(),
+                                cooldownHellzone);
+                    }
                 } else {
-                    AddonNetworkHandler.sendToServer(new SpawnHellzoneC2S(getLockOnTargetId()));
-                    hellzoneHoldTick = 0;
+                    if (!prevHellzone) {
+                        AddonNetworkHandler.sendToServer(new SpawnHellzoneC2S(getLockOnTargetId()));
+                        hellzoneHoldTick = 0;
+                        hellzoneActive = true;
+                    }
+                    if (hellzoneActive) {
+                        hellzoneHoldTick++;
+                        if (hellzoneHoldTick % HELLZONE_SPAWN_INTERVAL == 0) {
+                            AddonNetworkHandler.sendToServer(new SpawnHellzoneC2S(getLockOnTargetId()));
+                        }
+                        float progress = Math.min(1.0f, (float) hellzoneHoldTick / HELLZONE_MAX_HOLD);
+                        ScreenEffects.setCharging(true, progress,
+                                0.3f, 0.9f, 0.3f,
+                                Component.translatable("attack.dmzkiaddon.hellzone").getString(),
+                                AddonConfig.HELLZONE_KI_COST.get());
+                    }
                 }
             }
-            if (curHellzone && prevHellzone && cooldownHellzone == 0) {
-                hellzoneHoldTick++;
-            }
-            if (!curHellzone && prevHellzone && hellzoneHoldTick > 0 && cooldownHellzone == 0) {
+
+            if (!curHellzone && prevHellzone && hellzoneActive && cooldownHellzone == 0) {
                 AddonNetworkHandler.sendToServer(new LaunchHellzoneC2S(getLockOnTargetId()));
                 cooldownHellzone = AddonConfig.getCooldown(AttackType.HELLZONE);
                 hellzoneHoldTick = 0;
+                hellzoneActive = false;
+                ScreenEffects.stopCharging();
                 ScreenEffects.triggerShake(5, 10);
+            }
+
+            if (!curHellzone && prevHellzone && cooldownHellzone > 0) {
+                hellzoneHoldTick = 0;
+                hellzoneActive = false;
+                ScreenEffects.stopCharging();
             }
         }
 
-        // Hakai spam (minijuego)
         if (curHakaiSpam && !prevHakaiSpam && ScreenEffects.isHakaiActive()) {
             AddonNetworkHandler.sendToServer(new HakaiKeyPressC2S());
         }
 
-        // Hakai activar
         if (curHakai && !prevHakai && !ScreenEffects.isHakaiActive()) {
             if (hasSkill(player, "addon_hakai")) {
                 if (cooldownHakai > 0) {
-                    showCooldownMessage(player, "Hakai", cooldownHakai);
+                    showCooldownMessage(player,
+                            Component.translatable("attack.dmzkiaddon.hakai").getString(),
+                            cooldownHakai);
                 } else {
                     int targetId = getLockOnTargetId();
                     if (targetId != -1) {

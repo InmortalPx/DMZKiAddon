@@ -57,5 +57,11 @@
   "msg.dmzkiaddon.cooldown_label": " on cooldown: ",
   "msg.dmzkiaddon.attack_selected": "Selected: ",
   "msg.dmzkiaddon.hakai_no_target": "Hakai: you need a target (lock-on)",
-  "msg.dmzkiaddon.taiyoken_no_skill": "You haven't learned Solar Flare yet."
+  "msg.dmzkiaddon.taiyoken_no_skill": "You haven't learned Solar Flare yet.",
+
+  "attack.dmzkiaddon.hellzone": "Hellzone Grenade",
+  "attack.dmzkiaddon.hakai": "Hakai",
+  "attack.dmzkiaddon.taiyoken": "Taiyoken",
+  "msg.dmzkiaddon.hakai_label": "HAKAI!",
+  "msg.dmzkiaddon.hakai_hint": "Press [SPACE] rapidly!"
 }

@@ -179,12 +179,12 @@ public class ScreenEffects {
         gfx.fill(enemyBarX + halfW - enemyFill, barY, enemyBarX + halfW, barY + barH, 0xFFFF3333);
 
         // Label
-        String label = "HAKAI!";
+        String label = Component.translatable("msg.dmzkiaddon.hakai_label").getString();
         int labelW = mc.font.width(label);
         gfx.drawString(mc.font, Component.literal(label), screenW / 2 - labelW / 2, barY - 14, 0xFFFFD700, true);
 
         // Hint
-        String hint = "Presiona [SPACE] rapido!";
+        String hint  = Component.translatable("msg.dmzkiaddon.hakai_hint").getString();
         int hintW = mc.font.width(hint);
         gfx.drawString(mc.font, Component.literal(hint), screenW / 2 - hintW / 2, barY + barH + 4, 0xFFFFFFFF, true);
     }

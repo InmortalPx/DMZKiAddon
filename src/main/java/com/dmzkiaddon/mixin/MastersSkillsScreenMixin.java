@@ -21,12 +21,17 @@ public class MastersSkillsScreenMixin {
     static {
         ADDON_MASTER_ATTACKS.put("goku",    Arrays.asList(
                 "addon_ki_laser", "addon_ki_volley", "addon_kamehameha",
-                "addon_spirit_bomb", "addon_final_kamehameha", "addon_hakai"));
+                "addon_spirit_bomb", "addon_final_kamehameha"));
         ADDON_MASTER_ATTACKS.put("kingkai", Arrays.asList(
-                "addon_dodompa", "addon_masenko", "addon_taiyoken"));
+                "addon_dodompa", "addon_taiyoken"));
         ADDON_MASTER_ATTACKS.put("roshi",   Arrays.asList(
-                "addon_ki_disc", "addon_galick_gun", "addon_makankosappo",
-                "addon_big_bang", "addon_death_ball", "addon_hellzone", "addon_final_flash"));
+                "addon_ki_disc", "addon_death_ball"));
+        ADDON_MASTER_ATTACKS.put("vegeta",  Arrays.asList(
+                "addon_galick_gun", "addon_big_bang",
+                "addon_final_flash", "addon_hakai"));
+        ADDON_MASTER_ATTACKS.put("piccolo", Arrays.asList(
+                "addon_makankosappo", "addon_hellzone",
+                "addon_masenko"));
     }
 
     @Inject(method = "getMasterSkills", at = @At("RETURN"), cancellable = true)
@@ -41,20 +46,19 @@ public class MastersSkillsScreenMixin {
         cir.setReturnValue(result);
     }
 
-    /**
-     * Returns the TP cost for addon skills, reading live from AddonConfig
-     * so that /dmzkiaddon reload reflects immediately in the master screen.
-     *
-     * Injected at HEAD to short-circuit before DMZ's own cost lookup,
-     * which would return Integer.MAX_VALUE for unknown skill IDs.
-     */
     @Inject(method = "getUpgradeCost", at = @At("HEAD"), cancellable = true)
     private void injectAddonSkillCost(String skillName, int currentLevel,
                                       CallbackInfoReturnable<Integer> cir) {
         if (!skillName.startsWith("addon_")) return;
 
         Integer cost = AddonConfig.getAllTpCosts().get(skillName.toLowerCase());
-        if (cost != null) {
+        if (cost == null) return;
+
+        if (cost == -1) {
+            // Integer.MAX_VALUE hace que DMZ lo trate como "no tienes suficiente TP"
+            // y nunca se podrá comprar, pero el skill sí aparece en la lista
+            cir.setReturnValue(Integer.MAX_VALUE);
+        } else {
             cir.setReturnValue(cost);
         }
     }

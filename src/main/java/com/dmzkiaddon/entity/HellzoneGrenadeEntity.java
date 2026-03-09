@@ -13,10 +13,13 @@ import org.joml.Vector3f;
 
 public class HellzoneGrenadeEntity extends AbstractKiProjectile {
 
-    public enum Phase { ORBIT, CONVERGE }
+    public enum Phase { ORBIT, CONVERGE, CONVERGE_POINT }
 
     private static final Vector3f COLOR_MAIN   = new Vector3f(0.3f, 0.8f, 0.3f);
     private static final Vector3f COLOR_BRIGHT = new Vector3f(0.8f, 1.0f, 0.8f);
+
+    // Velocidad de convergencia: 0.8 * 0.97 ≈ 0.776 (3% menos)
+    private static final double CONVERGE_SPEED_MAX = 0.776;
 
     private Phase phase = Phase.ORBIT;
     private float orbitAngle;
@@ -26,6 +29,7 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
     private int   orbitTick = 0;
     private int   totalOrbiting;
     private LivingEntity target;
+    private Vec3  targetPoint; // para convergeToPoint
     private float kiDamage = 6f;
 
     private Level.ExplosionInteraction explosionInteraction = Level.ExplosionInteraction.MOB;
@@ -49,14 +53,22 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
         this.orbitIndex    = index;
         this.totalOrbiting = total;
         this.orbitRadius   = radius;
+        // Ángulo distribuido uniformemente
         this.orbitAngle    = (float)(2 * Math.PI * index / total);
-        this.orbitHeight   = 0.8f + (float) Math.sin(index * 1.3f) * 0.5f;
+        // FIX altura: distribuir entre 0.3 y 1.5 según el índice, no usar sin() que agrupa en la cabeza
+        this.orbitHeight   = 0.3f + (index % 3) * 0.6f;
     }
 
     public void converge(LivingEntity target, float damage) {
         this.phase    = Phase.CONVERGE;
         this.target   = target;
         this.kiDamage = damage;
+    }
+
+    public void convergeToPoint(Vec3 point, float damage) {
+        this.phase       = Phase.CONVERGE_POINT;
+        this.targetPoint = point;
+        this.kiDamage    = damage;
     }
 
     public Phase getPhase() { return phase; }
@@ -68,10 +80,10 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
 
         if (!this.level().isClientSide() && !this.isAlive()) return;
 
-        if (phase == Phase.ORBIT) {
-            tickOrbit();
-        } else {
-            tickConverge();
+        switch (phase) {
+            case ORBIT          -> tickOrbit();
+            case CONVERGE       -> tickConverge();
+            case CONVERGE_POINT -> tickConvergePoint();
         }
     }
 
@@ -82,7 +94,7 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
         double angle = orbitAngle + orbitTick * 0.08;
         double x = owner.getX() + Math.cos(angle) * orbitRadius;
         double z = owner.getZ() + Math.sin(angle) * orbitRadius;
-        double y = owner.getY() + orbitHeight + Math.sin(orbitTick * 0.1 + orbitIndex) * 0.15;
+        double y = owner.getY() + orbitHeight + Math.sin(orbitTick * 0.1 + orbitIndex) * 0.1;
 
         this.setDeltaMovement(x - this.getX(), y - this.getY(), z - this.getZ());
         this.setPos(x, y, z);
@@ -102,22 +114,44 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
 
         if (dist < 0.8) {
             if (!this.level().isClientSide()) {
-                // No dañar maestros
                 if (!(target instanceof MastersEntity)) {
                     target.hurt(this.level().damageSources().fellOutOfWorld(), kiDamage);
                 }
-
                 this.level().explode(this, this.getX(), this.getY(), this.getZ(),
                         1.5f, false, explosionInteraction);
-
                 spawnImpactParticles();
             }
             this.discard();
             return;
         }
 
-        double speed = Math.min(0.8, dist * 0.15);
+        double speed = Math.min(CONVERGE_SPEED_MAX, dist * 0.15);
         Vec3 velocity = toTarget.normalize().scale(speed);
+        this.setDeltaMovement(velocity);
+        this.setPos(this.getX() + velocity.x, this.getY() + velocity.y, this.getZ() + velocity.z);
+    }
+
+    private void tickConvergePoint() {
+        if (targetPoint == null) { this.discard(); return; }
+
+        Vec3 toPoint = new Vec3(
+                targetPoint.x - this.getX(),
+                targetPoint.y - this.getY(),
+                targetPoint.z - this.getZ());
+        double dist = toPoint.length();
+
+        if (dist < 0.8) {
+            if (!this.level().isClientSide()) {
+                this.level().explode(this, this.getX(), this.getY(), this.getZ(),
+                        1.5f, false, explosionInteraction);
+                spawnImpactParticles();
+            }
+            this.discard();
+            return;
+        }
+
+        double speed = Math.min(CONVERGE_SPEED_MAX, dist * 0.15);
+        Vec3 velocity = toPoint.normalize().scale(speed);
         this.setDeltaMovement(velocity);
         this.setPos(this.getX() + velocity.x, this.getY() + velocity.y, this.getZ() + velocity.z);
     }

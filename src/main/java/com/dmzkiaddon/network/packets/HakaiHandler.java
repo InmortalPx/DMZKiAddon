@@ -1,6 +1,5 @@
 package com.dmzkiaddon.network.packets;
 
-import com.dmzkiaddon.client.ScreenEffects;
 import com.dragonminez.common.init.entities.MastersEntity;
 import com.dragonminez.common.stats.StatsCapability;
 import com.dragonminez.common.stats.StatsProvider;
@@ -11,6 +10,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -105,6 +105,50 @@ public class HakaiHandler {
         return PLAYER_HAKAI.values().stream().anyMatch(d -> d.defenderId.equals(playerId));
     }
 
+    // ── FIX: limpiar minigame si alguien muere durante el cast ────────────
+    @SubscribeEvent
+    public static void onPlayerDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer deadPlayer)) return;
+        UUID deadId = deadPlayer.getUUID();
+
+        // Caso 1: el atacante murió
+        PlayerHakaiData data = PLAYER_HAKAI.get(deadId);
+        if (data != null && !data.finished) {
+            data.finished = true;
+            if (deadPlayer.getServer() != null) {
+                ServerPlayer defender = deadPlayer.getServer().getPlayerList().getPlayer(data.defenderId);
+                // El defensor sobrevive — mandarle "ganaste" para que la UI se cierre
+                if (defender != null) HakaiUpdateS2C.sendFinished(defender, true);
+            }
+            PLAYER_HAKAI.remove(deadId);
+            // También limpiar el NPC hakai que este atacante tenía pendiente
+            NPC_HAKAI.remove(deadId);
+            return;
+        }
+
+        // Caso 2: el defensor murió
+        UUID attackerIdToRemove = null;
+        for (Map.Entry<UUID, PlayerHakaiData> entry : PLAYER_HAKAI.entrySet()) {
+            PlayerHakaiData d = entry.getValue();
+            if (d.defenderId.equals(deadId) && !d.finished) {
+                d.finished = true;
+                if (deadPlayer.getServer() != null) {
+                    ServerPlayer attacker = deadPlayer.getServer().getPlayerList().getPlayer(d.attackerId);
+                    // El atacante gana automáticamente si el defensor muere
+                    if (attacker != null) HakaiUpdateS2C.sendFinished(attacker, true);
+                }
+                attackerIdToRemove = entry.getKey();
+                break;
+            }
+        }
+        if (attackerIdToRemove != null) {
+            PLAYER_HAKAI.remove(attackerIdToRemove);
+        }
+
+        // Caso 3: el atacante murió y tenía un NPC hakai en curso
+        NPC_HAKAI.remove(deadId);
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -125,14 +169,11 @@ public class HakaiHandler {
 
                 if (data.tick == NPC_HAKAI_DURATION) {
                     if (!(target instanceof MastersEntity)) {
-                        // Use generic damage so mobs with isInvulnerableTo(fellOutOfWorld) don't ignore it
                         DamageSource dmg = data.attacker != null
                                 ? serverLevel.damageSources().playerAttack(data.attacker)
                                 : serverLevel.damageSources().magic();
-                        // Remove invulnerability ticks so the hit always registers
                         target.invulnerableTime = 0;
                         target.hurt(dmg, Float.MAX_VALUE);
-                        // Fallback: if somehow still alive, kill directly
                         if (target.isAlive()) {
                             target.kill();
                         }

@@ -1,5 +1,6 @@
 package com.dmzkiaddon.network.packets;
 
+import com.dmzkiaddon.config.AddonConfig;
 import com.dragonminez.common.init.entities.ki.KiBarrierEntity;
 import com.dragonminez.common.stats.*;
 import net.minecraft.network.FriendlyByteBuf;
@@ -9,8 +10,6 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class ToggleKiShieldC2S {
-
-    private static final int KI_COST = 15;
 
     public ToggleKiShieldC2S() {}
 
@@ -25,8 +24,9 @@ public class ToggleKiShieldC2S {
             if (player == null) return;
             StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(stats -> {
                 int currentEnergy = stats.getResources().getCurrentEnergy();
-                if (currentEnergy < KI_COST) return;
-                stats.getResources().setCurrentEnergy(currentEnergy - KI_COST);
+                int cost = AddonConfig.KI_SHIELD_KI_COST.get();
+                if (currentEnergy < cost) return;
+                stats.getResources().setCurrentEnergy(currentEnergy - cost);
 
                 int kiColor = 0x44AAFF;
                 try {

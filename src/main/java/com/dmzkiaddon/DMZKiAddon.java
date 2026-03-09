@@ -6,6 +6,7 @@ import com.dmzkiaddon.command.KiAddonCommand;
 import com.dmzkiaddon.config.AddonConfig;
 import com.dmzkiaddon.network.AddonNetworkHandler;
 import com.dmzkiaddon.registry.ModSounds;
+import com.dmzkiaddon.registry.ModEntities;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -35,6 +36,7 @@ public class DMZKiAddon {
         modEventBus.addListener(this::commonSetup);
 
         ModSounds.SOUNDS.register(modEventBus);
+        ModEntities.ENTITY_TYPES.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
 
