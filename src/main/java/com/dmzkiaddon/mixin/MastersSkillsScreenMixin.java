@@ -20,18 +20,21 @@ public class MastersSkillsScreenMixin {
 
     static {
         ADDON_MASTER_ATTACKS.put("goku",    Arrays.asList(
-                "addon_ki_laser", "addon_ki_volley", "addon_kamehameha",
-                "addon_spirit_bomb", "addon_final_kamehameha"));
+                "addon_kamehameha", "addon_spirit_bomb",
+                "addon_final_kamehameha"));
         ADDON_MASTER_ATTACKS.put("kingkai", Arrays.asList(
                 "addon_dodompa", "addon_taiyoken"));
         ADDON_MASTER_ATTACKS.put("roshi",   Arrays.asList(
-                "addon_ki_disc", "addon_death_ball"));
+                "addon_ki_disc", "addon_ki_laser", "addon_ki_volley"));
         ADDON_MASTER_ATTACKS.put("vegeta",  Arrays.asList(
                 "addon_galick_gun", "addon_big_bang",
                 "addon_final_flash", "addon_hakai"));
         ADDON_MASTER_ATTACKS.put("piccolo", Arrays.asList(
                 "addon_makankosappo", "addon_hellzone",
                 "addon_masenko"));
+        // Frieza teaches: Death Ball, Kienzan, Big Bang Attack
+        ADDON_MASTER_ATTACKS.put("frieza",  Arrays.asList(
+                "addon_death_ball", "addon_ki_laser"));
     }
 
     @Inject(method = "getMasterSkills", at = @At("RETURN"), cancellable = true)
@@ -55,8 +58,6 @@ public class MastersSkillsScreenMixin {
         if (cost == null) return;
 
         if (cost == -1) {
-            // Integer.MAX_VALUE hace que DMZ lo trate como "no tienes suficiente TP"
-            // y nunca se podrá comprar, pero el skill sí aparece en la lista
             cir.setReturnValue(Integer.MAX_VALUE);
         } else {
             cir.setReturnValue(cost);

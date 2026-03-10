@@ -28,7 +28,8 @@ public class SkillsConfigMixin {
             "addon_hellzone",
             "addon_final_flash",
             "addon_final_kamehameha",
-            "addon_hakai"
+            "addon_hakai",
+            "addon_death_ball"  // enseñado por Frieza
     );
 
     @Inject(method = "getSkills", at = @At("RETURN"), cancellable = true)
@@ -83,15 +84,17 @@ public class SkillsConfigMixin {
         boolean changed = false;
 
         Map<String, List<String>> addonOfferings = Map.of(
-                "goku", List.of("addon_ki_laser", "addon_ki_volley",
+                "goku",    List.of(
                         "addon_kamehameha", "addon_spirit_bomb",
                         "addon_final_kamehameha"),
-                "kingkai", List.of("addon_dodompa", "addon_taiyoken"),
-                "roshi", List.of("addon_ki_disc", "addon_death_ball"),
-                "Vegeta", List.of("addon_galick_gun", "addon_big_bang",
+                "kingkai",  List.of("addon_dodompa", "addon_taiyoken"),
+                "roshi",    List.of("addon_ki_disc", "addon_ki_laser", "addon_ki_volley"),
+                "Vegeta",   List.of("addon_galick_gun", "addon_big_bang",
                         "addon_final_flash", "addon_hakai"),
-                "Piccolo", List.of("addon_makankosappo", "addon_hellzone",
-                        "addon_masenko")
+                "Piccolo",  List.of("addon_makankosappo", "addon_hellzone",
+                        "addon_masenko"),
+                "Frieza",   List.of("addon_death_ball", "addon_ki_laser"
+                        )
         );
 
         for (Map.Entry<String, List<String>> entry : addonOfferings.entrySet()) {

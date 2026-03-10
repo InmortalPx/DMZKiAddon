@@ -121,7 +121,7 @@ public class KeyHandler {
                     if (!curFire && prevFire) {
                         if (chargeTick >= MIN_CHARGE) {
                             float chargeLevel = (float) chargeTick / MAX_CHARGE;
-                            fireAttack(player, selected, chargeLevel);
+                            fireAttack(selected, chargeLevel);
                             cooldownMap.put(selected.type(), AddonConfig.getCooldown(selected.type()));
                             ScreenEffects.stopCharging();
                             ScreenEffects.triggerShake(4, 8);
@@ -133,7 +133,7 @@ public class KeyHandler {
                     }
                 } else {
                     if (curFire && !prevFire) {
-                        fireAttack(player, selected, 1.0f);
+                        fireAttack(selected, 1.0f);
                         cooldownMap.put(selected.type(), AddonConfig.getCooldown(selected.type()));
                         ScreenEffects.triggerShake(3, 6);
                         ChargeEffects.onFireAttack(selected.colorR(), selected.colorG(), selected.colorB(), 1.0f);
@@ -190,10 +190,13 @@ public class KeyHandler {
                             AddonNetworkHandler.sendToServer(new SpawnHellzoneC2S(getLockOnTargetId()));
                         }
                         float progress = Math.min(1.0f, (float) hellzoneHoldTick / HELLZONE_MAX_HOLD);
+                        int hellzoneCostDisplay = StatsProvider.get(StatsCapability.INSTANCE, player)
+                                .map(s -> (int)(s.getMaxEnergy() * (AddonConfig.HELLZONE_KI_COST_PCT.get() / 100f)))
+                                .orElse(0);
                         ScreenEffects.setCharging(true, progress,
                                 0.3f, 0.9f, 0.3f,
                                 Component.translatable("attack.dmzkiaddon.hellzone").getString(),
-                                AddonConfig.HELLZONE_KI_COST.get());
+                                hellzoneCostDisplay);
                     }
                 }
             }
@@ -267,7 +270,7 @@ public class KeyHandler {
         );
     }
 
-    private static void fireAttack(Player player, KiAttackEntry entry, float chargeLevel) {
+    private static void fireAttack(KiAttackEntry entry, float chargeLevel) {
         AddonNetworkHandler.sendToServer(new FireKiAttackC2S(entry.type(), chargeLevel));
     }
 
@@ -302,9 +305,7 @@ public class KeyHandler {
             Field field = LockOnEvent.class.getDeclaredField("lockedTarget");
             field.setAccessible(true);
             Object target = field.get(null);
-            if (target instanceof LivingEntity le && le.isAlive()) {
-                return le.getId();
-            }
+            if (target instanceof LivingEntity le && le.isAlive()) return le.getId();
         } catch (Exception ignored) {}
         return -1;
     }

@@ -45,6 +45,10 @@
   "skill.dragonminez.addon_hakai": "Hakai",
   "skill.dragonminez.addon_hakai.desc": "El poder de destrucción absoluta de un Dios. Pulveriza la existencia misma del objetivo. Técnica de Beerus.",
 
+  "entity.dmzkiaddon.master_vegeta": "Maestro Vegeta",
+  "entity.dmzkiaddon.master_piccolo": "Maestro Piccolo",
+  "entity.dmzkiaddon.master_frieza": "Maestro Freezer",
+
   "command.dmzkiaddon.reload.success": "§a[DMZKiAddon] Configuración recargada correctamente.",
   "command.dmzkiaddon.reload.fail": "§c[DMZKiAddon] Error al recargar la configuración: %s",
   "command.dmzkiaddon.give.success": "§a[DMZKiAddon] §fAtaque §e%s §fotorgado a §e%s§f.",
@@ -53,6 +57,7 @@
   "command.dmzkiaddon.remove.success_multiple": "§a[DMZKiAddon] §fAtaque §e%s §fremovido de §e%d §fjugadores.",
   "command.dmzkiaddon.attack.unknown": "§c[DMZKiAddon] Ataque Ki desconocido: %s",
   "command.dmzkiaddon.attack.all": "todos los ataques",
+  "command.dmzkiaddon.locate.not_found": "§c[DMZKiAddon] %s aún no ha spawneado en este mundo.",
 
   "msg.dmzkiaddon.cooldown_label": " en cooldown: ",
   "msg.dmzkiaddon.attack_selected": "Ataque seleccionado: ",
@@ -63,5 +68,18 @@
   "attack.dmzkiaddon.hakai": "Hakai",
   "attack.dmzkiaddon.taiyoken": "Taiyoken",
   "msg.dmzkiaddon.hakai_label": "¡HAKAI!",
-  "msg.dmzkiaddon.hakai_hint": "¡Presiona [SPACE] rápido!"
+  "msg.dmzkiaddon.hakai_hint": "¡Presiona [SPACE] rápido!",
+
+  "log.dmzkiaddon.spawn.overworld_search_start": "[DMZKiAddon] Chunk del spawn del Overworld cargado. Iniciando búsqueda de plains...",
+  "log.dmzkiaddon.spawn.vegeta_no_plains": "[DMZKiAddon] Vegeta: no se encontró bioma plains cerca del spawn.",
+  "log.dmzkiaddon.spawn.piccolo_fallback": "[DMZKiAddon] Piccolo usando posición fallback %s",
+  "log.dmzkiaddon.spawn.namek_search_start": "[DMZKiAddon] Chunk del spawn de Namek cargado. Buscando posición para Frieza...",
+  "log.dmzkiaddon.spawn.namek_waiting": "[DMZKiAddon] Frieza: esperando chunks de Namek...",
+  "log.dmzkiaddon.spawn.structure_not_found": "[DMZKiAddon] Estructura no encontrada: %s",
+  "log.dmzkiaddon.spawn.structure_placed": "[DMZKiAddon] Colocada '%s' (%dx%dx%d) en %s",
+  "log.dmzkiaddon.spawn.structure_error": "[DMZKiAddon] Error al colocar estructura %s: %s",
+
+  "msg.dmzkiaddon.spawn.vegeta": "§6Maestro Vegeta §fha aparecido en el Overworld.",
+  "msg.dmzkiaddon.spawn.piccolo": "§2Maestro Piccolo §fha aparecido en el Overworld.",
+  "msg.dmzkiaddon.spawn.frieza": "§dMaestro Freezer §fha aparecido en Namek."
 }

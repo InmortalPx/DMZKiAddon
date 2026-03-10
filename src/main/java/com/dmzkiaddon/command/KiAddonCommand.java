@@ -2,6 +2,7 @@ package com.dmzkiaddon.command;
 
 import com.dmzkiaddon.config.AddonConfig;
 import com.dmzkiaddon.DMZKiAddon;
+import com.dmzkiaddon.world.MasterSpawnManager;
 import com.dragonminez.common.network.NetworkHandler;
 import com.dragonminez.common.network.S2C.StatsSyncS2C;
 import com.dragonminez.common.stats.StatsCapability;
@@ -11,11 +12,17 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.fml.loading.FMLPaths;
 
@@ -56,11 +63,19 @@ public class KiAddonCommand {
                     builder
             );
 
+    private static final SuggestionProvider<CommandSourceStack> MASTER_SUGGESTIONS =
+            (ctx, builder) -> SharedSuggestionProvider.suggest(
+                    List.of("vegeta", "piccolo", "frieza"), builder
+            );
+
+    // ── Register ───────────────────────────────────────────────────────────
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 Commands.literal("dmzkiaddon")
                         .requires(source -> source.hasPermission(2))
 
+                        // /dmzkiaddon give <attack> [targets]
                         .then(Commands.literal("give")
                                 .then(Commands.argument("attack", StringArgumentType.string())
                                         .suggests(ATTACK_SUGGESTIONS)
@@ -75,6 +90,7 @@ public class KiAddonCommand {
                                 )
                         )
 
+                        // /dmzkiaddon remove <attack> [targets]
                         .then(Commands.literal("remove")
                                 .then(Commands.argument("attack", StringArgumentType.string())
                                         .suggests(ATTACK_SUGGESTIONS)
@@ -89,11 +105,76 @@ public class KiAddonCommand {
                                 )
                         )
 
+                        // /dmzkiaddon locate <vegeta|piccolo|frieza>
+                        .then(Commands.literal("locate")
+                                .then(Commands.argument("master", StringArgumentType.string())
+                                        .suggests(MASTER_SUGGESTIONS)
+                                        .executes(ctx -> executeLocate(ctx,
+                                                StringArgumentType.getString(ctx, "master")))
+                                )
+                        )
+
+                        // /dmzkiaddon reload
                         .then(Commands.literal("reload")
                                 .executes(KiAddonCommand::executeReload)
                         )
         );
     }
+
+    // ── Locate ─────────────────────────────────────────────────────────────
+
+    private static int executeLocate(CommandContext<CommandSourceStack> ctx, String master) {
+        CommandSourceStack source = ctx.getSource();
+        ServerLevel overworld = source.getServer().overworld();
+
+        BlockPos pos = switch (master.toLowerCase()) {
+            case "vegeta"  -> MasterSpawnManager.getVegetaPos(overworld);
+            case "piccolo" -> MasterSpawnManager.getPiccoloPos(overworld);
+            case "frieza"  -> MasterSpawnManager.getFriezaPos(overworld);
+            default -> null;
+        };
+
+        String masterDisplay = capitalize(master);
+
+        if (pos == null) {
+            source.sendFailure(Component.literal(
+                    "§c[DMZKiAddon] " + masterDisplay + " has not spawned yet in this world."
+            ));
+            return 0;
+        }
+
+        // Build a clickable teleport component
+        String tpCmd = "/tp @s " + pos.getX() + " " + pos.getY() + " " + pos.getZ();
+        MutableComponent coords = Component.literal(
+                        String.format("§e%d, %d, %d", pos.getX(), pos.getY(), pos.getZ()))
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, tpCmd))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                Component.literal("Click to teleport")))
+                );
+
+        String dimensionHint = master.equalsIgnoreCase("frieza")
+                ? " §7(dragonminez:namek)" : " §7(Overworld)";
+
+        source.sendSuccess(() ->
+                        Component.empty()
+                                .append(Component.literal("§a[DMZKiAddon] ").withStyle(ChatFormatting.BOLD))
+                                .append(Component.literal("§f" + masterDisplay + " is at "))
+                                .append(coords)
+                                .append(Component.literal(dimensionHint)),
+                false
+        );
+
+        DMZKiAddon.LOGGER.info("[DMZKiAddon] locate {} → {}", masterDisplay, pos);
+        return 1;
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1).toLowerCase();
+    }
+
+    // ── Give / Remove ──────────────────────────────────────────────────────
 
     private static int executeGive(CommandContext<CommandSourceStack> ctx,
                                    Collection<ServerPlayer> targets,
@@ -162,16 +243,7 @@ public class KiAddonCommand {
         return targets.size();
     }
 
-    /**
-     * Attempts to fully remove a skill from the player's skill data so it
-     * disappears from menus. Strategy (in order):
-     *
-     *  1. Call removeSkill(String) if DMZ exposes it publicly.
-     *  2. Find the internal Map field by reflection and remove the key.
-     *  3. Fall back to setSkillLevel(id, 0) with a warning.
-     */
     private static void removeSkillCompletely(Object skillsObj, String skillId) {
-        // Strategy 1: public removeSkill method
         try {
             Method removeMethod = skillsObj.getClass().getMethod("removeSkill", String.class);
             removeMethod.invoke(skillsObj, skillId);
@@ -181,7 +253,6 @@ public class KiAddonCommand {
             DMZKiAddon.LOGGER.warn("[DMZKiAddon] removeSkill({}) threw: {}", skillId, e.getMessage());
         }
 
-        // Strategy 2: find the backing Map field by reflection
         String[] candidateFields = {"skills", "skillLevels", "learnedSkills", "skillMap", "data"};
         for (String fieldName : candidateFields) {
             try {
@@ -197,7 +268,6 @@ public class KiAddonCommand {
             } catch (Exception ignored) {}
         }
 
-        // Strategy 3: last resort
         try {
             skillsObj.getClass().getMethod("setSkillLevel", String.class, int.class)
                     .invoke(skillsObj, skillId, 0);
@@ -215,6 +285,8 @@ public class KiAddonCommand {
         }
         return null;
     }
+
+    // ── Reload ─────────────────────────────────────────────────────────────
 
     public static int executeReload(CommandContext<CommandSourceStack> ctx) {
         try {

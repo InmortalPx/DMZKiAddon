@@ -34,25 +34,21 @@ public class InitiateHakaiC2S {
 
             StatsProvider.get(StatsCapability.INSTANCE, attacker).ifPresent(stats -> {
                 int energy = stats.getResources().getCurrentEnergy();
-                int cost = AddonConfig.getCost(FireKiAttackC2S.AttackType.HAKAI);
+                int cost   = (int)(stats.getMaxEnergy() * (AddonConfig.getCostPercentage(FireKiAttackC2S.AttackType.HAKAI) / 100f));
                 if (energy < cost) return;
 
                 Entity targetEntity = attacker.level().getEntity(packet.targetEntityId);
                 if (!(targetEntity instanceof LivingEntity target) || !target.isAlive()) return;
 
-                // Try player minigame first — if target is a player AND minigame started OK,
-                // don't also start the NPC hakai on them.
                 boolean handledAsPlayer = false;
                 if (target instanceof ServerPlayer defender) {
                     handledAsPlayer = HakaiHandler.startPlayerHakai(attacker, defender);
                 }
 
                 if (!handledAsPlayer) {
-                    // Target is a mob, or player minigame couldn't start (already in one)
                     HakaiHandler.startNpcHakai(attacker, target);
                 }
 
-                // Deduct Ki only after confirming the attack actually started
                 stats.getResources().setCurrentEnergy(energy - cost);
             });
         });

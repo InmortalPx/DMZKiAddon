@@ -1,5 +1,6 @@
 package com.dmzkiaddon.client;
 
+import com.dmzkiaddon.client.renderer.MasterFriezaRenderer;
 import com.dmzkiaddon.client.renderer.MasterPiccoloRenderer;
 import com.dmzkiaddon.client.renderer.MasterVegetaRenderer;
 import com.dmzkiaddon.registry.ModEntities;
@@ -52,7 +53,8 @@ public class ClientSetup {
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(ModEntities.MASTER_VEGETA.get(), MasterVegetaRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_VEGETA.get(),  MasterVegetaRenderer::new);
         event.registerEntityRenderer(ModEntities.MASTER_PICCOLO.get(), MasterPiccoloRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_FRIEZA.get(),  MasterFriezaRenderer::new);
     }
 }

@@ -1,11 +1,13 @@
 package com.dmzkiaddon.registry;
 
 import com.dmzkiaddon.DMZKiAddon;
+import com.dmzkiaddon.entity.masters.MasterFriezaEntity;
 import com.dmzkiaddon.entity.masters.MasterPiccoloEntity;
 import com.dmzkiaddon.entity.masters.MasterVegetaEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -33,16 +35,29 @@ public class ModEntities {
                             .build("master_piccolo")
             );
 
+    public static final RegistryObject<EntityType<MasterFriezaEntity>> MASTER_FRIEZA =
+            ENTITY_TYPES.register("master_frieza", () ->
+                    EntityType.Builder.<MasterFriezaEntity>of(MasterFriezaEntity::new, MobCategory.MISC)
+                            .sized(0.6f, 1.8f)
+                            .build("master_frieza")
+            );
+
     @SubscribeEvent
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(MASTER_VEGETA.get(),
-                net.minecraft.world.entity.monster.Monster.createMonsterAttributes()
+                Monster.createMonsterAttributes()
                         .add(Attributes.MAX_HEALTH, 20.0)
                         .add(Attributes.MOVEMENT_SPEED, 0.25)
                         .build()
         );
         event.put(MASTER_PICCOLO.get(),
-                net.minecraft.world.entity.monster.Monster.createMonsterAttributes()
+                Monster.createMonsterAttributes()
+                        .add(Attributes.MAX_HEALTH, 20.0)
+                        .add(Attributes.MOVEMENT_SPEED, 0.25)
+                        .build()
+        );
+        event.put(MASTER_FRIEZA.get(),
+                Monster.createMonsterAttributes()
                         .add(Attributes.MAX_HEALTH, 20.0)
                         .add(Attributes.MOVEMENT_SPEED, 0.25)
                         .build()
