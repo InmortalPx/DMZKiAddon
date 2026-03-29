@@ -1,6 +1,5 @@
 package com.dmzkiaddon.client;
 
-import com.dmzkiaddon.client.renderer.MakankosappoRenderer;
 import com.dmzkiaddon.client.renderer.MasterFriezaRenderer;
 import com.dmzkiaddon.client.renderer.MasterHitRenderer;
 import com.dmzkiaddon.client.renderer.MasterPiccoloRenderer;
@@ -68,7 +67,6 @@ public class ClientSetup {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         KiWaveAddon.prewarmAccessors();
-        event.registerEntityRenderer(ModEntities.MAKANKOSAPPO.get(),        MakankosappoRenderer::new);
         event.registerEntityRenderer(ModEntities.MASTER_VEGETA.get(),       MasterVegetaRenderer::new);
         event.registerEntityRenderer(ModEntities.MASTER_PICCOLO.get(),      MasterPiccoloRenderer::new);
         event.registerEntityRenderer(ModEntities.MASTER_FRIEZA.get(),       MasterFriezaRenderer::new);

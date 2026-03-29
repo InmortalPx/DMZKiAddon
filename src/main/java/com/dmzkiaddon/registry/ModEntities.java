@@ -1,7 +1,6 @@
 package com.dmzkiaddon.registry;
 
 import com.dmzkiaddon.DMZKiAddon;
-import com.dmzkiaddon.entity.MakankosappoEntity;
 import com.dmzkiaddon.entity.masters.MasterFriezaEntity;
 import com.dmzkiaddon.entity.masters.MasterHitEntity;
 import com.dmzkiaddon.entity.masters.MasterPiccoloEntity;
@@ -23,15 +22,6 @@ public class ModEntities {
 
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
             DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, DMZKiAddon.MOD_ID);
-
-    public static final RegistryObject<EntityType<MakankosappoEntity>> MAKANKOSAPPO =
-            ENTITY_TYPES.register("makankosappo", () ->
-                    EntityType.Builder.<MakankosappoEntity>of(MakankosappoEntity::new, MobCategory.MISC)
-                            .sized(0.5f, 0.5f)
-                            .clientTrackingRange(64)
-                            .updateInterval(1)
-                            .build("makankosappo")
-            );
 
     public static final RegistryObject<EntityType<MasterVegetaEntity>> MASTER_VEGETA =
             ENTITY_TYPES.register("master_vegeta", () ->

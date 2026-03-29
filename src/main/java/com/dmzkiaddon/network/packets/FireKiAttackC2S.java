@@ -169,6 +169,8 @@ public class FireKiAttackC2S {
             case MAKANKOSAPPO -> {
                 MakankosappoEntity beam = new MakankosappoEntity(level, player);
                 beam.setKiDamage(kiDamage * 1.3f);
+                beam.setSize(sizeMult * 0.8f);
+                beam.setKiSpeed(2.5f);
                 level.addFreshEntity(beam);
                 playOne(level, player, ModSounds.BASICBEAM_FIRE.get(), 0.6f, 0.8f);
             }
@@ -192,8 +194,8 @@ public class FireKiAttackC2S {
                 KiBlastAddon spirit = new KiBlastAddon(level, player);
                 spirit.setColors(0x44AAFF, 0xCCEEFF);
                 spirit.setKiDamage(kiDamage * 2.0f * Math.max(charge, 0.1f));
-                float spiritFinal = sizeMult * 2.5f;
-                spirit.setSize(spiritFinal * 0.3f);
+                float spiritFinal = sizeMult * 9.0f;
+                spirit.setSize(spiritFinal * 0.12f);
                 spirit.enableGrowth(spiritFinal);
                 spirit.enableWind();
                 spirit.setImpactShake(9, 16);

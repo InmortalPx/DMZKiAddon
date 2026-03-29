@@ -32,9 +32,12 @@ public class MastersSkillsScreenMixin {
         ADDON_MASTER_ATTACKS.put("piccolo", Arrays.asList(
                 "addon_makankosappo", "addon_hellzone",
                 "addon_masenko"));
-        // Frieza teaches: Death Ball, Kienzan, Big Bang Attack
         ADDON_MASTER_ATTACKS.put("frieza",  Arrays.asList(
                 "addon_death_ball", "addon_ki_laser"));
+        ADDON_MASTER_ATTACKS.put("tenshinhan", Arrays.asList(
+                "addon_kikoho", "addon_neo_kikoho"));
+        ADDON_MASTER_ATTACKS.put("hit", Arrays.asList(
+                "addon_time_skip", "addon_point_pressure"));
     }
 
     @Inject(method = "getMasterSkills", at = @At("RETURN"), cancellable = true)

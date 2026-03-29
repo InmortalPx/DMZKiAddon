@@ -1,5 +1,7 @@
 package com.dmzkiaddon.client.gui;
 
+import com.dmzkiaddon.client.ClientSetup;
+import com.dmzkiaddon.config.AddonConfig;
 import com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry;
 import com.dmzkiaddon.client.AttackSelector;
 import com.dragonminez.client.gui.utilitymenu.AbstractMenuSlot;
@@ -7,22 +9,36 @@ import com.dragonminez.client.gui.utilitymenu.ButtonInfo;
 import com.dragonminez.client.gui.utilitymenu.IUtilityMenuSlot;
 import com.dragonminez.common.stats.StatsData;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * Slot en el menú X de DragonMineZ.
- * Muestra el ataque Ki seleccionado actualmente y permite ciclarlo con click izquierdo.
- * Los ataques especiales (Hakai, Hellzone) aparecen en el contador ★ y tienen tecla dedicada.
- *
- * Left click  → ciclar al siguiente ataque normal aprendido
- * Right click → sin acción
- */
 public class KiAttackMenuSlot extends AbstractMenuSlot implements IUtilityMenuSlot {
+
+    private static Map<String, KeyMapping> buildSpecialKeyMap() {
+        Map<String, KeyMapping> map = new LinkedHashMap<>();
+        map.put("addon_hellzone",        ClientSetup.KEY_HELLZONE);
+        map.put("addon_hakai",           ClientSetup.KEY_HAKAI);
+        map.put("addon_time_skip",       ClientSetup.KEY_TIME_SKIP);
+        map.put("addon_point_pressure",  ClientSetup.KEY_POINT_PRESSURE);
+        map.put("addon_final_explosion", ClientSetup.KEY_FINAL_EXPLOSION);
+        map.put("addon_kikoho",          ClientSetup.KEY_KIKOHO);
+        map.put("addon_neo_kikoho",      ClientSetup.KEY_NEO_KIKOHO);
+        return map;
+    }
+
+    private static String getKeyName(KeyMapping key) {
+        String name = key.getTranslatedKeyMessage().getString();
+        if (name == null || name.isBlank() || name.equals("key.keyboard.unknown")) return "-";
+        if (name.length() > 4) name = name.substring(0, 4);
+        return name;
+    }
 
     @Override
     public ButtonInfo render(StatsData statsData) {
@@ -47,14 +63,37 @@ public class KiAttackMenuSlot extends AbstractMenuSlot implements IUtilityMenuSl
             line1 = Component.literal("Ataques Ki").withStyle(ChatFormatting.BOLD);
         }
 
-        int specialCount = (int) allLearned.stream().filter(KiAttackEntry::isSpecial).count();
         String line2Text;
         if (selected != null) {
             int index = AttackSelector.getSelectedIndex() + 1;
-            line2Text = "Ki: " + selected.baseCost() + "  [" + index + "/" + normalLearned.size() + "]";
-            if (specialCount > 0) line2Text += "  ★" + specialCount;
+            int realKiCost = 0;
+            if (statsData != null) {
+                int maxEnergy = statsData.getMaxEnergy();
+                double costPct = AddonConfig.getCostPercentage(selected.type());
+                realKiCost = (int)(maxEnergy * (costPct / 100.0));
+            }
+            line2Text = "Ki:" + realKiCost + " [" + index + "/" + normalLearned.size() + "]";
         } else {
-            line2Text = "★" + specialCount + " especial" + (specialCount != 1 ? "es" : "");
+            line2Text = "Ataques Ki";
+        }
+
+        List<KiAttackEntry> specialLearned = allLearned.stream()
+                .filter(KiAttackEntry::isSpecial)
+                .toList();
+
+        if (!specialLearned.isEmpty()) {
+            Map<String, KeyMapping> keyMap = buildSpecialKeyMap();
+            StringBuilder sb = new StringBuilder();
+            for (KiAttackEntry sp : specialLearned) {
+                KeyMapping km = keyMap.get(sp.id());
+                String keyName = km != null ? getKeyName(km) : "-";
+                String shortName = sp.displayName().length() > 6
+                        ? sp.displayName().substring(0, 6)
+                        : sp.displayName();
+                if (sb.length() > 0) sb.append(" ");
+                sb.append(shortName).append("(").append(keyName).append(")");
+            }
+            line2Text = line2Text + " | " + sb;
         }
 
         ButtonInfo info = new ButtonInfo(line1, Component.literal(line2Text), true);

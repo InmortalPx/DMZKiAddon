@@ -167,8 +167,22 @@ public class KeyHandler {
                     if (!curFire && prevFire) {
                         if (chargeTick >= MIN_CHARGE) {
                             float chargeLevel = (float) chargeTick / MAX_CHARGE;
-                            fireAttack(selected, chargeLevel);
-                            cooldownMap.put(selected.type(), AddonConfig.getCooldown(selected.type()));
+                            boolean hasKi = StatsProvider.get(StatsCapability.INSTANCE, player)
+                                    .map(stats -> {
+                                        int cost = (int)(stats.getMaxEnergy()
+                                                * (AddonConfig.getCostPercentage(selected.type()) / 100f)
+                                                * (1f + chargeLevel));
+                                        return stats.getResources().getCurrentEnergy() >= cost;
+                                    }).orElse(false);
+                            if (hasKi) {
+                                fireAttack(selected, chargeLevel);
+                                cooldownMap.put(selected.type(), AddonConfig.getCooldown(selected.type()));
+                            } else {
+                                player.displayClientMessage(
+                                        net.minecraft.network.chat.Component.literal("§cNo tienes suficiente Ki"),
+                                        true);
+                                ScreenEffects.stopCharging();
+                            }
                         } else {
                             ScreenEffects.stopCharging();
                         }
@@ -176,8 +190,21 @@ public class KeyHandler {
                     }
                 } else {
                     if (curFire && !prevFire) {
-                        fireAttack(selected, 1.0f);
-                        cooldownMap.put(selected.type(), AddonConfig.getCooldown(selected.type()));
+                        boolean hasKi = StatsProvider.get(StatsCapability.INSTANCE, player)
+                                .map(stats -> {
+                                    int cost = (int)(stats.getMaxEnergy()
+                                            * (AddonConfig.getCostPercentage(selected.type()) / 100f)
+                                            * 2f);
+                                    return stats.getResources().getCurrentEnergy() >= cost;
+                                }).orElse(false);
+                        if (hasKi) {
+                            fireAttack(selected, 1.0f);
+                            cooldownMap.put(selected.type(), AddonConfig.getCooldown(selected.type()));
+                        } else {
+                            player.displayClientMessage(
+                                    net.minecraft.network.chat.Component.literal("§cNo tienes suficiente Ki"),
+                                    true);
+                        }
                     }
                 }
             }
@@ -526,33 +553,8 @@ public class KeyHandler {
         return result[0];
     }
 
-    private static java.lang.reflect.Field LOCK_ON_FIELD = null;
-    private static boolean lockOnFieldResolved = false;
-
     private static int getLockOnTargetId() {
-        if (!lockOnFieldResolved) {
-            lockOnFieldResolved = true;
-            try {
-                for (java.lang.reflect.Field f : com.dragonminez.client.events.LockOnEvent.class.getDeclaredFields()) {
-                    if (net.minecraft.world.entity.LivingEntity.class.isAssignableFrom(f.getType())) {
-                        f.setAccessible(true);
-                        LOCK_ON_FIELD = f;
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                com.dmzkiaddon.DMZKiAddon.LOGGER.warn("[DMZKiAddon] No se pudo resolver el campo lockedTarget de LockOnEvent: {}", e.getMessage());
-            }
-        }
-        if (LOCK_ON_FIELD == null) return -1;
-        try {
-            Object target = LOCK_ON_FIELD.get(null);
-            if (target instanceof net.minecraft.world.entity.LivingEntity le && le.isAlive()) {
-                LockOnBridge.setTarget(le);
-                return le.getId();
-            }
-        } catch (Exception ignored) {}
-        return -1;
+        return LockOnBridge.getTargetId();
     }
 
     private static void spawnFinalExplosionChargeParticles(Player player, float progress) {

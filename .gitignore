@@ -2,22 +2,28 @@
 .gradle/
 build/
 out/
+!gradle/wrapper/gradle-wrapper.jar
 
 # IntelliJ
 .idea/
 *.iml
+*.ipr
+*.iws
 
-# Minecraft run folder
+# Minecraft / Forge
 run/
-
-
-# Forge dev libs
-libs/
-
-# Logs
 logs/
 *.log
+
+# Forge libs
+libs/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Java
+*.class
+
+# Generated
+bin/
