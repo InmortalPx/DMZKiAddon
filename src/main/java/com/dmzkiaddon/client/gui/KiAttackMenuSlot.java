@@ -1,6 +1,5 @@
 package com.dmzkiaddon.client.gui;
 
-import com.dmzkiaddon.client.ClientSetup;
 import com.dmzkiaddon.config.AddonConfig;
 import com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry;
 import com.dmzkiaddon.client.AttackSelector;
@@ -9,102 +8,134 @@ import com.dragonminez.client.gui.utilitymenu.ButtonInfo;
 import com.dragonminez.client.gui.utilitymenu.IUtilityMenuSlot;
 import com.dragonminez.common.stats.StatsData;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Player;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class KiAttackMenuSlot extends AbstractMenuSlot implements IUtilityMenuSlot {
 
-    private static Map<String, KeyMapping> buildSpecialKeyMap() {
-        Map<String, KeyMapping> map = new LinkedHashMap<>();
-        map.put("addon_hellzone",        ClientSetup.KEY_HELLZONE);
-        map.put("addon_hakai",           ClientSetup.KEY_HAKAI);
-        map.put("addon_time_skip",       ClientSetup.KEY_TIME_SKIP);
-        map.put("addon_point_pressure",  ClientSetup.KEY_POINT_PRESSURE);
-        map.put("addon_final_explosion", ClientSetup.KEY_FINAL_EXPLOSION);
-        map.put("addon_kikoho",          ClientSetup.KEY_KIKOHO);
-        map.put("addon_neo_kikoho",      ClientSetup.KEY_NEO_KIKOHO);
-        return map;
-    }
-
-    private static String getKeyName(KeyMapping key) {
-        String name = key.getTranslatedKeyMessage().getString();
-        if (name == null || name.isBlank() || name.equals("key.keyboard.unknown")) return "-";
-        if (name.length() > 4) name = name.substring(0, 4);
-        return name;
-    }
-
     @Override
     public ButtonInfo render(StatsData statsData) {
-        List<KiAttackEntry> allLearned    = AttackSelector.getAllLearnedAttacks();
-        List<KiAttackEntry> normalLearned = AttackSelector.getLearnedAttacks();
+        List<KiAttackEntry> allLearned = AttackSelector.getAllLearnedAttacks();
+        Player player = Minecraft.getInstance().player;
 
         if (allLearned.isEmpty()) {
             ButtonInfo empty = new ButtonInfo(
                     Component.translatable("gui.dmzkiaddon.no_attacks").withStyle(ChatFormatting.BOLD),
-                    Component.translatable("gui.dmzkiaddon.learn_from_master")
+                    Component.translatable("gui.dmzkiaddon.learn_from_master").withStyle(ChatFormatting.GRAY)
             );
-            empty.setColor(0xAAAAAA);
+            empty.setColor(0x888888);
             return empty;
         }
 
         KiAttackEntry selected = AttackSelector.getSelected();
-
-        Component line1;
+        
+        MutableComponent line1;
         if (selected != null) {
-            line1 = Component.literal(selected.displayName()).withStyle(ChatFormatting.BOLD);
+            int r = (int)(selected.colorR() * 200);
+            int g = (int)(selected.colorG() * 200);
+            int b = (int)(selected.colorB() * 200);
+            int color = (r << 16) | (g << 8) | b;
+            line1 = Component.literal("► " + selected.displayName())
+                    .withStyle(style -> style.withColor(color).withBold(true));
         } else {
             line1 = Component.literal("Ataques Ki").withStyle(ChatFormatting.BOLD);
         }
 
-        String line2Text;
-        if (selected != null) {
+        MutableComponent line2 = Component.empty();
+        
+        if (selected != null && player != null) {
             int index = AttackSelector.getSelectedIndex() + 1;
-            int realKiCost = 0;
-            if (statsData != null) {
-                int maxEnergy = statsData.getMaxEnergy();
-                double costPct = AddonConfig.getCostPercentage(selected.type());
-                realKiCost = (int)(maxEnergy * (costPct / 100.0));
+            final int[] colorHolder = {0x556666};
+            final String[] textHolder = {""};
+            
+            switch (selected.type()) {
+                case KIKOHO -> {
+                    float hpPct = AddonConfig.KIKOHO_HP_COST_PCT.get().floatValue();
+                    int hpCost = (int)(player.getMaxHealth() * (hpPct / 100.0f));
+                    float kiPct = AddonConfig.KIKOHO_KI_COST_PCT.get().floatValue();
+                    int kiCost = statsData != null ? (int)(statsData.getMaxEnergy() * (kiPct / 100.0f)) : 0;
+                    textHolder[0] = "HP:" + hpCost + " Ki:" + kiCost;
+                    colorHolder[0] = 0x884444;
+                }
+                case NEO_KIKOHO -> {
+                    float kiPct = AddonConfig.NEO_KIKOHO_KI_COST_PCT.get().floatValue();
+                    int kiCost = statsData != null ? (int)(statsData.getMaxEnergy() * (kiPct / 100.0f)) : 0;
+                    textHolder[0] = "Ki:" + kiCost + " + HP↑";
+                    colorHolder[0] = 0x886644;
+                }
+                case FINAL_EXPLOSION -> {
+                    textHolder[0] = "HP:100%";
+                    colorHolder[0] = 0x662222;
+                }
+                case TIME_SKIP -> {
+                    int skpCost = AddonConfig.TIME_SKIP_SKP_COST.get();
+                    textHolder[0] = "SKP:" + skpCost;
+                    colorHolder[0] = 0x554477;
+                }
+                case POINT_PRESSURE -> {
+                    float pct = AddonConfig.POINT_PRESSURE_KI_COST_PCT.get().floatValue();
+                    int cost = statsData != null ? (int)(statsData.getMaxEnergy() * (pct / 100.0f)) : 0;
+                    textHolder[0] = "Ki:" + cost;
+                    colorHolder[0] = 0x446666;
+                }
+                case HAKAI -> {
+                    float pct = AddonConfig.HAKAI_KI_COST_PCT.get().floatValue();
+                    int cost = statsData != null ? (int)(statsData.getMaxEnergy() * (pct / 100.0f)) : 0;
+                    textHolder[0] = "Ki:" + cost;
+                    colorHolder[0] = 0x442244;
+                }
+                case HELLZONE -> {
+                    float pct = AddonConfig.HELLZONE_KI_COST_PCT.get().floatValue();
+                    int cost = statsData != null ? (int)(statsData.getMaxEnergy() * (pct / 100.0f)) : 0;
+                    textHolder[0] = "Ki:" + cost + "/gd";
+                    colorHolder[0] = 0x224422;
+                }
+                case TAIYOKEN -> {
+                    float pct = AddonConfig.TAIYOKEN_KI_COST_PCT.get().floatValue();
+                    int cost = statsData != null ? (int)(statsData.getMaxEnergy() * (pct / 100.0f)) : 0;
+                    textHolder[0] = "Ki:" + cost;
+                    colorHolder[0] = 0x888888;
+                }
+                default -> {
+                    if (statsData != null) {
+                        float pct = AddonConfig.getCostPercentage(selected.type());
+                        int baseCost = (int)(statsData.getMaxEnergy() * (pct / 100.0f));
+                        if (selected.isCharged()) {
+                            textHolder[0] = "Ki:" + baseCost + "→" + (baseCost * 2);
+                        } else {
+                            textHolder[0] = "Ki:" + baseCost;
+                        }
+                        colorHolder[0] = 0x556666;
+                    } else {
+                        textHolder[0] = "Ki:???";
+                        colorHolder[0] = 0x666666;
+                    }
+                }
             }
-            line2Text = "Ki:" + realKiCost + " [" + index + "/" + normalLearned.size() + "]";
-        } else {
-            line2Text = "Ataques Ki";
+            
+            final int finalColor = colorHolder[0];
+            final String finalText = textHolder[0];
+            
+            line2.append(Component.literal(finalText).withStyle(style -> style.withColor(finalColor)));
+            line2.append(Component.literal(" [" + index + "/" + allLearned.size() + "]")
+                    .withStyle(ChatFormatting.DARK_GRAY));
         }
 
-        List<KiAttackEntry> specialLearned = allLearned.stream()
-                .filter(KiAttackEntry::isSpecial)
-                .toList();
-
-        if (!specialLearned.isEmpty()) {
-            Map<String, KeyMapping> keyMap = buildSpecialKeyMap();
-            StringBuilder sb = new StringBuilder();
-            for (KiAttackEntry sp : specialLearned) {
-                KeyMapping km = keyMap.get(sp.id());
-                String keyName = km != null ? getKeyName(km) : "-";
-                String shortName = sp.displayName().length() > 6
-                        ? sp.displayName().substring(0, 6)
-                        : sp.displayName();
-                if (sb.length() > 0) sb.append(" ");
-                sb.append(shortName).append("(").append(keyName).append(")");
-            }
-            line2Text = line2Text + " | " + sb;
-        }
-
-        ButtonInfo info = new ButtonInfo(line1, Component.literal(line2Text), true);
+        ButtonInfo info = new ButtonInfo(line1, line2, true);
 
         if (selected != null) {
-            int r = (int)(selected.colorR() * 255);
-            int g = (int)(selected.colorG() * 255);
-            int b = (int)(selected.colorB() * 255);
+            int r = (int)(selected.colorR() * 180);
+            int g = (int)(selected.colorG() * 180);
+            int b = (int)(selected.colorB() * 180);
             info.setColor((r << 16) | (g << 8) | b);
         } else {
-            info.setColor(0xAA00AA);
+            info.setColor(0x664466);
         }
 
         return info;
@@ -112,25 +143,37 @@ public class KiAttackMenuSlot extends AbstractMenuSlot implements IUtilityMenuSl
 
     @Override
     public void handle(StatsData statsData, boolean rightClick) {
-        List<KiAttackEntry> normalLearned = AttackSelector.getLearnedAttacks();
-        List<KiAttackEntry> allLearned    = AttackSelector.getAllLearnedAttacks();
+        List<KiAttackEntry> allLearned = AttackSelector.getAllLearnedAttacks();
         if (allLearned.isEmpty()) return;
 
-        if (!rightClick && !normalLearned.isEmpty()) {
+        if (!rightClick) {
             AttackSelector.selectNext();
             KiAttackEntry selected = AttackSelector.getSelected();
             if (selected != null) {
-                net.minecraft.client.player.LocalPlayer player = Minecraft.getInstance().player;
+                var player = Minecraft.getInstance().player;
                 if (player != null) {
                     int index = AttackSelector.getSelectedIndex() + 1;
-                    player.displayClientMessage(
-                            Component.empty()
-                                    .append(Component.literal("Ataque seleccionado: ").withStyle(ChatFormatting.GRAY))
-                                    .append(Component.literal(selected.displayName()).withStyle(ChatFormatting.AQUA))
-                                    .append(Component.literal(" [" + index + "/" + normalLearned.size() + "]")
-                                            .withStyle(ChatFormatting.DARK_GRAY)),
-                            true
-                    );
+                    
+                    String costType = switch (selected.type()) {
+                        case KIKOHO, FINAL_EXPLOSION -> "HP";
+                        case TIME_SKIP -> "SKP";
+                        default -> "Ki";
+                    };
+                    
+                    MutableComponent msg = Component.empty()
+                            .append(Component.literal("Ataque: ").withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(selected.displayName())
+                                    .withStyle(style -> {
+                                        int r = (int)(selected.colorR() * 200);
+                                        int g = (int)(selected.colorG() * 200);
+                                        int b = (int)(selected.colorB() * 200);
+                                        return style.withColor((r << 16) | (g << 8) | b);
+                                    }))
+                            .append(Component.literal(" [" + index + "/" + allLearned.size() + "]")
+                                    .withStyle(ChatFormatting.DARK_GRAY))
+                            .append(Component.literal(" (" + costType + ")").withStyle(ChatFormatting.GRAY));
+                    
+                    player.displayClientMessage(msg, true);
                 }
             }
         }

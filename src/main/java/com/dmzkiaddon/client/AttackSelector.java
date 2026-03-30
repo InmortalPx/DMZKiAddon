@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Client-side singleton that tracks which Ki attack is currently selected
- * and filters the list to only attacks the player has learned.
+ * Client-side singleton que gestiona el ataque de Ki seleccionado.
+ * El ciclo incluye TODOS los ataques aprendidos (normales + especiales) en orden.
  */
 @OnlyIn(Dist.CLIENT)
 public class AttackSelector {
@@ -24,33 +24,8 @@ public class AttackSelector {
     private AttackSelector() {}
 
     /**
-     * Returns the list of NORMAL (non-special) attacks the local player has learned.
-     * These are the attacks cycled via KEY_FIRE.
-     * Falls back to NORMAL if capability unavailable.
-     */
-    public static List<KiAttackEntry> getLearnedAttacks() {
-        Minecraft mc = Minecraft.getInstance();
-        Player player = mc.player;
-        if (player == null) return new ArrayList<>(AttackRegistry.NORMAL);
-
-        List<KiAttackEntry> learned = new ArrayList<>();
-        boolean[] capFound = {false};
-        StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(stats -> {
-            capFound[0] = true;
-            for (KiAttackEntry entry : AttackRegistry.NORMAL) {
-                var skill = stats.getSkills().getSkill(entry.id());
-                if (skill != null && skill.getLevel() > 0) {
-                    learned.add(entry);
-                }
-            }
-        });
-        if (!capFound[0]) learned.addAll(AttackRegistry.NORMAL);
-        return learned;
-    }
-
-    /**
-     * Returns ALL learned attacks including specials (Hakai, Hellzone).
-     * Used for display in the X-menu slot.
+     * Todos los ataques aprendidos (normales + especiales) en el orden de AttackRegistry.ALL.
+     * Este es el ciclo principal — los 20 ataques.
      */
     public static List<KiAttackEntry> getAllLearnedAttacks() {
         Minecraft mc = Minecraft.getInstance();
@@ -73,20 +48,28 @@ public class AttackSelector {
     }
 
     /**
-     * Returns the currently selected attack, or null if the player has no learned attacks.
+     * Solo ataques normales (no especiales) aprendidos.
+     * Mantenido por compatibilidad con código existente.
      */
+    public static List<KiAttackEntry> getLearnedAttacks() {
+        List<KiAttackEntry> all = getAllLearnedAttacks();
+        List<KiAttackEntry> normal = new ArrayList<>();
+        for (KiAttackEntry e : all) {
+            if (!e.isSpecial()) normal.add(e);
+        }
+        return normal;
+    }
+
+    /** Ataque actualmente seleccionado (puede ser normal o especial). */
     public static KiAttackEntry getSelected() {
-        List<KiAttackEntry> learned = getLearnedAttacks();
+        List<KiAttackEntry> learned = getAllLearnedAttacks();
         if (learned.isEmpty()) return null;
         selectedIndex = Math.min(selectedIndex, learned.size() - 1);
         return learned.get(selectedIndex);
     }
 
-    /**
-     * Selects an attack by its skill id. No-op if not in the learned list.
-     */
     public static void selectById(String id) {
-        List<KiAttackEntry> learned = getLearnedAttacks();
+        List<KiAttackEntry> learned = getAllLearnedAttacks();
         for (int i = 0; i < learned.size(); i++) {
             if (learned.get(i).id().equals(id)) {
                 selectedIndex = i;
@@ -96,13 +79,13 @@ public class AttackSelector {
     }
 
     public static void selectNext() {
-        List<KiAttackEntry> learned = getLearnedAttacks();
+        List<KiAttackEntry> learned = getAllLearnedAttacks();
         if (learned.isEmpty()) return;
         selectedIndex = (selectedIndex + 1) % learned.size();
     }
 
     public static void selectPrev() {
-        List<KiAttackEntry> learned = getLearnedAttacks();
+        List<KiAttackEntry> learned = getAllLearnedAttacks();
         if (learned.isEmpty()) return;
         selectedIndex = ((selectedIndex - 1) + learned.size()) % learned.size();
     }
@@ -111,9 +94,8 @@ public class AttackSelector {
         return selectedIndex;
     }
 
-    /** Returns the index within the learned list for a given skill id, or -1. */
     public static int indexOfId(String id) {
-        List<KiAttackEntry> learned = getLearnedAttacks();
+        List<KiAttackEntry> learned = getAllLearnedAttacks();
         for (int i = 0; i < learned.size(); i++) {
             if (learned.get(i).id().equals(id)) return i;
         }

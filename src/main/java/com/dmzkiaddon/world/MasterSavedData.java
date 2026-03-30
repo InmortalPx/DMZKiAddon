@@ -57,13 +57,13 @@ public class MasterSavedData extends SavedData {
     public void    setSpawned(boolean v)     { this.spawned = v; }
 
     public BlockPos getVegetaPos()           { return vegetaPos; }
-    public void     setVegetaPos(BlockPos p) { this.vegetaPos = p; }
+    public void     setVegetaPos(BlockPos p) { this.vegetaPos = p; setDirty(); }
 
     public BlockPos getPiccoloPos()           { return piccoloPos; }
-    public void     setPiccoloPos(BlockPos p) { this.piccoloPos = p; }
+    public void     setPiccoloPos(BlockPos p) { this.piccoloPos = p; setDirty(); }
 
     public BlockPos getFriezaPos()           { return friezaPos; }
-    public void     setFriezaPos(BlockPos p) { this.friezaPos = p; }
+    public void     setFriezaPos(BlockPos p) { this.friezaPos = p; setDirty(); }
 
     public BlockPos getTenshinhanPos()           { return tenshinhanPos; }
     public void     setTenshinhanPos(BlockPos p) { this.tenshinhanPos = p; setDirty(); }

@@ -8,14 +8,14 @@ public class MasterVegetaModel extends GeoModel<MasterVegetaEntity> {
 
     @Override
     public ResourceLocation getModelResource(MasterVegetaEntity entity) {
-        return ResourceLocation.fromNamespaceAndPath("dragonminez",
-                "geo/entity/sagas/saga_vegeta_namek.geo.json");
+        return ResourceLocation.fromNamespaceAndPath("dmzkiaddon",
+                "geo/master_vegeta.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(MasterVegetaEntity entity) {
         return ResourceLocation.fromNamespaceAndPath("dragonminez",
-                "textures/entity/sagas/saga_vegeta_namek.png");
+                "textures/entity/master/vegeta.png");
     }
 
     @Override
