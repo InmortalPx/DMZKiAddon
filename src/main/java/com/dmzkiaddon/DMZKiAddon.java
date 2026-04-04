@@ -43,6 +43,7 @@ public class DMZKiAddon {
 
         // Register MasterSpawnManager on the Forge event bus (handles LevelEvent.Load)
         MinecraftForge.EVENT_BUS.register(MasterSpawnManager.class);
+        MinecraftForge.EVENT_BUS.addListener(this::onPlayerLoggedIn);
 
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             MinecraftForge.EVENT_BUS.register(KeyHandler.class);
@@ -68,7 +69,16 @@ public class DMZKiAddon {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(AddonNetworkHandler::register);
+        event.enqueueWork(() -> {
+            AddonNetworkHandler.register();
+            com.dmzkiaddon.registry.CustomAttackManager.load();
+        });
+    }
+
+    private void onPlayerLoggedIn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            com.dmzkiaddon.registry.CustomAttackManager.syncToPlayer(player);
+        }
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
