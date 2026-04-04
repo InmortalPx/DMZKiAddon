@@ -11,7 +11,12 @@
     "KiLaserEntityMixin"
   ],
   "client": [
-    "UtilityMenuScreenMixin"
+    "UtilityMenuScreenMixin",
+    "BaseMenuScreenMixin",
+    "client.SkillsMenuSlotMixin",
+    "client.KiManipulationMenuSlotMixin",
+    "client.SkillsMenuScreenMixin",
+    "client.MastersSkillsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -12,49 +12,39 @@ import java.util.*;
 @Mixin(value = SkillsConfig.class, remap = false)
 public class SkillsConfigMixin {
 
-    private static final List<String> ADDON_SKILL_IDS = List.of(
-            "addon_ki_laser",
-            "addon_dodompa",
-            "addon_ki_volley",
-            "addon_masenko",
-            "addon_galick_gun",
-            "addon_kamehameha",
-            "addon_ki_disc",
-            "addon_makankosappo",
-            "addon_taiyoken",
-            "addon_big_bang",
-            "addon_spirit_bomb",
-            "addon_death_ball",
-            "addon_hellzone",
-            "addon_final_flash",
-            "addon_final_kamehameha",
-            "addon_hakai",
-            "addon_time_skip",
-            "addon_point_pressure",
-            "addon_final_explosion",
-            "addon_kikoho",
-            "addon_neo_kikoho"
-    );
+    private static List<String> getAllAddonSkillIds() {
+        List<String> ids = new ArrayList<>();
+        com.dmzkiaddon.registry.AttackRegistry.ALL.forEach(entry -> ids.add(entry.id()));
+        return ids;
+    }
 
     @Inject(method = "getSkills", at = @At("RETURN"), cancellable = true)
     private void injectAddonSkillsIntoMap(CallbackInfoReturnable<Map<String, SkillsConfig.SkillCosts>> cir) {
         Map<String, SkillsConfig.SkillCosts> original = cir.getReturnValue();
 
+        List<String> addonSkillIds = getAllAddonSkillIds();
         boolean needsInjection = false;
-        for (String id : ADDON_SKILL_IDS) {
+        for (String id : addonSkillIds) {
             if (!original.containsKey(id)) {
                 needsInjection = true;
                 break;
             }
         }
-        if (!needsInjection) return;
+        if (!needsInjection)
+            return;
 
         Map<String, SkillsConfig.SkillCosts> extended = new HashMap<>(original);
         Map<String, Integer> tpCosts = AddonConfig.getAllTpCosts();
 
-        for (String skillId : ADDON_SKILL_IDS) {
+        for (String skillId : addonSkillIds) {
             if (!extended.containsKey(skillId)) {
-                Integer cost = tpCosts.get(skillId);
+                Integer cost = tpCosts.get(skillId.toLowerCase());
+                if (cost == null) {
+                    cost = com.dmzkiaddon.registry.AttackRegistry.byId(skillId)
+                            .map(com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry::baseCost)
+                            .orElse(null);
+                }
+
                 if (cost != null) {
                     extended.put(skillId, new SkillsConfig.SkillCosts(
                             Collections.singletonList(cost)));
@@ -69,13 +59,23 @@ public class SkillsConfigMixin {
     private void injectAddonSkillCosts(String skillName,
                                        CallbackInfoReturnable<SkillsConfig.SkillCosts> cir) {
         String lower = skillName.toLowerCase();
-        if (!ADDON_SKILL_IDS.contains(lower)) return;
 
         SkillsConfig.SkillCosts existing = cir.getReturnValue();
-        if (existing != null && !existing.getCosts().isEmpty()) return;
+        if (existing != null && !existing.getCosts().isEmpty())
+            return;
+
+        boolean isOurSkill = com.dmzkiaddon.registry.AttackRegistry.byId(lower).isPresent();
+        if (!isOurSkill)
+            return;
 
         Map<String, Integer> tpCosts = AddonConfig.getAllTpCosts();
         Integer cost = tpCosts.get(lower);
+        if (cost == null) {
+            cost = com.dmzkiaddon.registry.AttackRegistry.byId(lower)
+                    .map(com.dmzkiaddon.registry.AttackRegistry.KiAttackEntry::baseCost)
+                    .orElse(null);
+        }
+
         if (cost != null) {
             cir.setReturnValue(new SkillsConfig.SkillCosts(
                     Collections.singletonList(cost)));

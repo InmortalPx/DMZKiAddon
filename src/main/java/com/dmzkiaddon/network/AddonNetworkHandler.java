@@ -59,11 +59,13 @@ public class AddonNetworkHandler {
         reg(KikohoC2S.class,                KikohoC2S::new,                KikohoC2S::encode,                KikohoC2S::handle,                NetworkDirection.PLAY_TO_SERVER);
         reg(NeoKikohoC2S.class,             NeoKikohoC2S::new,             NeoKikohoC2S::encode,             NeoKikohoC2S::handle,             NetworkDirection.PLAY_TO_SERVER);
         reg(NeoKikohoResetC2S.class,        NeoKikohoResetC2S::new,        NeoKikohoResetC2S::encode,        NeoKikohoResetC2S::handle,        NetworkDirection.PLAY_TO_SERVER);
+        reg(CreateCustomAttackC2S.class,    CreateCustomAttackC2S::new,    CreateCustomAttackC2S::encode,    CreateCustomAttackC2S::handle,    NetworkDirection.PLAY_TO_SERVER);
 
         // S2C — servidor → cliente
         reg(HakaiUpdateS2C.class,           HakaiUpdateS2C::new,           HakaiUpdateS2C::encode,           HakaiUpdateS2C::handle,           NetworkDirection.PLAY_TO_CLIENT);
         reg(ImpactShakeS2C.class,           ImpactShakeS2C::new,           ImpactShakeS2C::encode,           ImpactShakeS2C::handle,           NetworkDirection.PLAY_TO_CLIENT);
-        // ↑ Agrega nuevos paquetes S2C aquí arriba, nunca más abajo de este comentario
+        reg(SyncAttackRegistryS2C.class,    SyncAttackRegistryS2C::new,    SyncAttackRegistryS2C::encode,    SyncAttackRegistryS2C::handle,    NetworkDirection.PLAY_TO_CLIENT);
+        reg(SyncSkillLevelS2C.class,        SyncSkillLevelS2C::new,        SyncSkillLevelS2C::encode,        SyncSkillLevelS2C::handle,        NetworkDirection.PLAY_TO_CLIENT);
 
         LOGGER.info("[DMZKiAddon] {} paquetes registrados correctamente.", registeredCount);
     }

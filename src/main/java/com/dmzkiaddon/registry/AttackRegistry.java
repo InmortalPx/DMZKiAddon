@@ -14,7 +14,8 @@ public class AttackRegistry {
             int cooldownTicks,
             boolean isCharged,
             boolean requiresSkill,
-            boolean isSpecial
+            boolean isSpecial,
+            float powerMultiplier
     ) {
         // Constructor sin isSpecial — por defecto false (ataque normal ciclo KEY_FIRE)
         public KiAttackEntry(AttackType type, String id, String displayName,
@@ -22,11 +23,19 @@ public class AttackRegistry {
                              int baseCost, int cooldownTicks,
                              boolean isCharged, boolean requiresSkill) {
             this(type, id, displayName, colorR, colorG, colorB,
-                    baseCost, cooldownTicks, isCharged, requiresSkill, false);
+                    baseCost, cooldownTicks, isCharged, requiresSkill, false, 1.0f);
+        }
+
+        public KiAttackEntry(AttackType type, String id, String displayName,
+                             float colorR, float colorG, float colorB,
+                             int baseCost, int cooldownTicks,
+                             boolean isCharged, boolean requiresSkill, boolean isSpecial) {
+            this(type, id, displayName, colorR, colorG, colorB,
+                    baseCost, cooldownTicks, isCharged, requiresSkill, isSpecial, 1.0f);
         }
     }
 
-    public static final List<KiAttackEntry> ALL = List.of(
+    public static final List<KiAttackEntry> ALL = new ArrayList<>(List.of(
             // ── Ataques normales (ciclo KEY_FIRE) ─────────────────────────────────
             // KI_LASER: beam tipo rayo, cargable (más tiempo = más daño)
             new KiAttackEntry(AttackType.KI_LASER,         "addon_ki_laser",         "Ki Laser",         0.53f, 0.87f, 1.0f,   10,  10, true,  true),
@@ -63,17 +72,36 @@ public class AttackRegistry {
                     1.0f, 0.55f, 0.0f, 0, 160, false, true, true),
             new KiAttackEntry(AttackType.NEO_KIKOHO, "addon_neo_kikoho", "Neo Kikoho",
                     1.0f, 0.65f, 0.1f, 0, 300, false, true, true)
-    );
+    ));
 
     // Ataques que van al ciclo KEY_FIRE (todos menos HELLZONE y HAKAI)
-    public static final List<KiAttackEntry> NORMAL = ALL.stream()
+    public static final List<KiAttackEntry> NORMAL = new ArrayList<>(ALL.stream()
             .filter(e -> !e.isSpecial())
-            .toList();
+            .toList());
 
     private static final Map<String, KiAttackEntry> BY_ID = new LinkedHashMap<>();
 
     static {
         for (KiAttackEntry e : ALL) BY_ID.put(e.id(), e);
+    }
+
+    public static void register(KiAttackEntry entry) {
+        if (BY_ID.containsKey(entry.id())) {
+            BY_ID.put(entry.id(), entry);
+            ALL.removeIf(e -> e.id().equals(entry.id()));
+            ALL.add(entry);
+            if (!entry.isSpecial()) {
+                NORMAL.removeIf(e -> e.id().equals(entry.id()));
+                NORMAL.add(entry);
+            }
+            return;
+        }
+        ALL.add(entry);
+        if (!entry.isSpecial())
+            NORMAL.add(entry);
+        BY_ID.put(entry.id(), entry);
+
+        CustomAttackManager.save(entry);
     }
 
     public static Optional<KiAttackEntry> byId(String id) {
@@ -82,5 +110,10 @@ public class AttackRegistry {
 
     public static Optional<KiAttackEntry> byType(AttackType type) {
         return ALL.stream().filter(e -> e.type() == type).findFirst();
+    }
+
+    public static String getName(String id) {
+        KiAttackEntry entry = BY_ID.get(id);
+        return entry != null ? entry.displayName() : id;
     }
 }
