@@ -1,6 +1,9 @@
 package com.dmzkiaddon.registry;
 
 import com.dmzkiaddon.DMZKiAddon;
+import com.dmzkiaddon.entity.KiBlastAddon;
+import com.dmzkiaddon.entity.KiLaserAddon;
+import com.dmzkiaddon.entity.KiWaveAddon;
 import com.dmzkiaddon.entity.masters.MasterFriezaEntity;
 import com.dmzkiaddon.entity.masters.MasterHitEntity;
 import com.dmzkiaddon.entity.masters.MasterPiccoloEntity;
@@ -57,6 +60,25 @@ public class ModEntities {
                             .sized(0.6f, 1.85f)
                             .build("master_hit")
             );
+
+    // ── Proyectiles del addon (entity types propios — no sobreescriben DMZ base) ──────
+    public static final RegistryObject<EntityType<KiBlastAddon>> KI_BLAST_ADDON =
+            ENTITY_TYPES.register("ki_blast_addon", () ->
+                    EntityType.Builder.<KiBlastAddon>of(KiBlastAddon::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f).clientTrackingRange(64).updateInterval(1)
+                            .build("dmzkiaddon:ki_blast_addon"));
+
+    public static final RegistryObject<EntityType<KiWaveAddon>> KI_WAVE_ADDON =
+            ENTITY_TYPES.register("ki_wave_addon", () ->
+                    EntityType.Builder.<KiWaveAddon>of(KiWaveAddon::new, MobCategory.MISC)
+                            .sized(1.0f, 1.0f).clientTrackingRange(64).updateInterval(1)
+                            .build("dmzkiaddon:ki_wave_addon"));
+
+    public static final RegistryObject<EntityType<KiLaserAddon>> KI_LASER_ADDON =
+            ENTITY_TYPES.register("ki_laser_addon", () ->
+                    EntityType.Builder.<KiLaserAddon>of(KiLaserAddon::new, MobCategory.MISC)
+                            .sized(0.3f, 0.3f).clientTrackingRange(64).updateInterval(1)
+                            .build("dmzkiaddon:ki_laser_addon"));
 
     @SubscribeEvent
     public static void registerAttributes(EntityAttributeCreationEvent event) {

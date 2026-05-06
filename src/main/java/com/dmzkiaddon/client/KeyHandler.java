@@ -24,6 +24,12 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.EnumMap;
 import java.util.Map;
+import com.dmzkiaddon.network.packets.FinalExplosionC2S;
+import com.dmzkiaddon.network.packets.FinalExplosionCancelC2S;
+import com.dmzkiaddon.network.packets.FinalExplosionChargeC2S;
+import com.dmzkiaddon.network.packets.KikohoC2S;
+import com.dmzkiaddon.network.packets.NeoKikohoC2S;
+import com.dmzkiaddon.network.packets.NeoKikohoResetC2S;
 
 @OnlyIn(Dist.CLIENT)
 public class KeyHandler {
@@ -75,6 +81,7 @@ public class KeyHandler {
 
     private static boolean prevNeoKikoho  = false;
     private static int cooldownNeoKikoho  = 0;
+    private static int neoKikohoIdleTicks = 0;
     private static int neoKikohoBurstTick = 0;
     private static int neoKikohoComboLocal = 0;
     private static final int NEO_KIKOHO_BURST_INTERVAL = 12;
@@ -278,6 +285,78 @@ public class KeyHandler {
                 cooldownPointPressure = AddonConfig.getCooldown(AttackType.POINT_PRESSURE);
                 ScreenEffects.triggerPointPressureAura();
             }
+        }
+
+
+        // ── Final Explosion (hold = carga, soltar = detonar) ─────────────────
+        if (hasSkill(player, "addon_final_explosion") && cooldownFinalExplosion == 0) {
+            if (curFinalExplosion) {
+                finalExplosionHoldTick++;
+                finalExplosionActive = true;
+
+                // Calcular VIT y daño estimado en cliente para mostrar en HUD
+                float[] vitArr = {0f}, dmgArr = {0f};
+                StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(stats -> {
+                    vitArr[0] = stats.getStats().getVitality();
+                    float hp  = player.getHealth();
+                    dmgArr[0] = (hp * 2.0f) + (vitArr[0] * 5.0f);
+                });
+
+                float progress = Math.min(1.0f, finalExplosionHoldTick / 80.0f);
+                ScreenEffects.setFinalExplosionStats((int) vitArr[0], dmgArr[0]);
+                ScreenEffects.setCharging(true, progress, 1.0f, 0.8f, 0.2f, "Final Explosion", 0);
+
+                // Primer tick: avisar al servidor para el Slowness
+                if (!prevFinalExplosion) {
+                    AddonNetworkHandler.sendToServer(new FinalExplosionChargeC2S());
+                }
+            }
+            if (!curFinalExplosion && prevFinalExplosion && finalExplosionActive) {
+                if (finalExplosionHoldTick >= 20) { // mínimo 1 segundo
+                    AddonNetworkHandler.sendToServer(new FinalExplosionC2S());
+                    cooldownFinalExplosion = AddonConfig.getCooldown(AttackType.FINAL_EXPLOSION);
+                } else {
+                    AddonNetworkHandler.sendToServer(new FinalExplosionCancelC2S());
+                }
+                finalExplosionHoldTick = 0;
+                finalExplosionActive   = false;
+                ScreenEffects.stopCharging();
+            }
+        }
+
+        // ── Kikoho ────────────────────────────────────────────────────────────
+        if (curKikoho && !prevKikoho) {
+            if (hasSkill(player, "addon_kikoho")) {
+                if (cooldownKikoho > 0) {
+                    showCooldownMessage(player, "Kikoho", cooldownKikoho);
+                } else {
+                    AddonNetworkHandler.sendToServer(new com.dmzkiaddon.network.packets.KikohoC2S());
+                    cooldownKikoho = AddonConfig.getCooldown(AttackType.KIKOHO);
+                }
+            }
+        }
+
+        // ── Neo Kikoho — dispara en cada press (sistema de combo) ────────────
+        if (curNeoKikoho && !prevNeoKikoho) {
+            if (hasSkill(player, "addon_neo_kikoho")) {
+                if (cooldownNeoKikoho > 0) {
+                    showCooldownMessage(player, "Neo Kikoho", cooldownNeoKikoho);
+                } else {
+                    AddonNetworkHandler.sendToServer(new com.dmzkiaddon.network.packets.NeoKikohoC2S());
+                    // Cooldown corto entre disparos para que el combo fluya
+                    cooldownNeoKikoho = 10; // 0.5 segundos entre cada ráfaga
+                }
+            }
+        }
+        // Resetear combo si pasa mucho tiempo sin disparar
+        if (!curNeoKikoho && !prevNeoKikoho) {
+            neoKikohoIdleTicks++;
+            if (neoKikohoIdleTicks > 60) { // 3 segundos sin usar = reset combo
+                AddonNetworkHandler.sendToServer(new com.dmzkiaddon.network.packets.NeoKikohoResetC2S());
+                neoKikohoIdleTicks = 0;
+            }
+        } else {
+            neoKikohoIdleTicks = 0;
         }
 
         prevFire            = curFire;

@@ -1,9 +1,6 @@
 package com.dmzkiaddon.world;
 
 import com.dmzkiaddon.DMZKiAddon;
-import com.dmzkiaddon.entity.masters.MasterHitEntity;
-import com.dmzkiaddon.entity.masters.MasterTenshinhanEntity;
-import com.dmzkiaddon.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
@@ -92,6 +89,10 @@ public class MasterSpawnManager {
             ResourceLocation.fromNamespaceAndPath("dmzkiaddon", "masters/master_piccolo");
     private static final ResourceLocation RL_FRIEZA =
             ResourceLocation.fromNamespaceAndPath("dmzkiaddon", "masters/master_frieza");
+    private static final ResourceLocation RL_TENSHINHAN =
+            ResourceLocation.fromNamespaceAndPath("dmzkiaddon", "masters/master_tenshinhan");
+    private static final ResourceLocation RL_HIT =
+            ResourceLocation.fromNamespaceAndPath("dmzkiaddon", "masters/master_hit");
 
     private static final ResourceKey<Level> NAMEK = ResourceKey.create(
             net.minecraft.core.registries.Registries.DIMENSION,
@@ -409,26 +410,18 @@ public class MasterSpawnManager {
     }
 
     private static void doSpawnTenshinhan(ServerLevel level, MasterSavedData data, BlockPos surfacePos) {
-        MasterTenshinhanEntity entity = ModEntities.MASTER_TENSHINHAN.get().create(level);
-        if (entity == null) return;
-        entity.moveTo(surfacePos.getX() + 0.5, surfacePos.getY() + 1, surfacePos.getZ() + 0.5, 0f, 0f);
-        entity.setPersistenceRequired();
-        level.addFreshEntity(entity);
+        placeStructure(level, RL_TENSHINHAN, surfacePos.offset(-6, 1, -6));
         data.setTenshinhanPos(surfacePos);
         needTenshinhan = false;
-        DMZKiAddon.LOGGER.info("[DMZKiAddon] Tenshinhan spawned at {}", surfacePos);
+        DMZKiAddon.LOGGER.info("[DMZKiAddon] Tenshinhan structure placed at {}", surfacePos);
         broadcastToAll(level, MSG_TENSHINHAN_SPAWN);
     }
 
     private static void doSpawnHit(ServerLevel level, MasterSavedData data, BlockPos surfacePos) {
-        MasterHitEntity entity = ModEntities.MASTER_HIT.get().create(level);
-        if (entity == null) return;
-        entity.moveTo(surfacePos.getX() + 0.5, surfacePos.getY() + 1, surfacePos.getZ() + 0.5, 180f, 0f);
-        entity.setPersistenceRequired();
-        level.addFreshEntity(entity);
+        placeStructure(level, RL_HIT, surfacePos.offset(-6, 1, -6));
         data.setHitPos(surfacePos);
         needHit = false;
-        DMZKiAddon.LOGGER.info("[DMZKiAddon] Hit spawned at {}", surfacePos);
+        DMZKiAddon.LOGGER.info("[DMZKiAddon] Hit structure placed at {}", surfacePos);
         broadcastToAll(level, MSG_HIT_SPAWN);
     }
 

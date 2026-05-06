@@ -17,6 +17,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public class KikohoC2S {
@@ -34,7 +36,7 @@ public class KikohoC2S {
 
             StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(stats -> {
 
-                int maxEnergy    = stats.getMaxEnergy();
+                int maxEnergy     = stats.getMaxEnergy();
                 int currentEnergy = stats.getResources().getCurrentEnergy();
                 int kiCost        = (int)(maxEnergy * (AddonConfig.KIKOHO_KI_COST_PCT.get() / 100.0));
                 float hpCost      = player.getMaxHealth() * AddonConfig.KIKOHO_HP_COST_PCT.get().floatValue() / 100.0f;
@@ -43,19 +45,22 @@ public class KikohoC2S {
                 if (player.getHealth() <= hpCost + 1.0f) return;
 
                 stats.getResources().setCurrentEnergy(currentEnergy - kiCost);
-                player.hurt(player.damageSources().magic(), hpCost);
 
-                float str      = stats.getStats().getStrength();
-                float pwr      = (float) stats.getKiDamage();
-                float scale    = AddonConfig.KIKOHO_DAMAGE_SCALE.get().floatValue();
-                float damage   = (str * 0.6f + pwr * 0.4f) * scale;
+                // Costo HP directo — bypasea absorción y tótem para que sea real
+                applyDirectHp(player, hpCost);
 
-                Vec3 look  = player.getLookAngle();
-                Vec3 start = player.getEyePosition();
+                float str    = stats.getStats().getStrength();
+                float pwr    = (float) stats.getKiDamage();
+                float scale  = AddonConfig.KIKOHO_DAMAGE_SCALE.get().floatValue();
+                float damage = (str * 0.6f + pwr * 0.4f) * scale;
+
+                Vec3  look  = player.getLookAngle();
+                Vec3  start = player.getEyePosition();
                 float reach = 30.0f;
                 float half  = 2.5f;
 
-                java.util.Set<LivingEntity> hitSet = new java.util.HashSet<>();
+                // Recolectar entidades en el rayo (HashSet evita duplicados)
+                Set<LivingEntity> hitSet = new HashSet<>();
                 for (int step = 0; step < (int) reach; step++) {
                     Vec3 center = start.add(look.scale(step + 0.5));
                     AABB slice  = new AABB(
@@ -65,30 +70,30 @@ public class KikohoC2S {
                             e -> !e.equals(player) && e.isAlive()).forEach(hitSet::add);
                 }
 
-                DamageSource src = player.damageSources().magic();
                 Vec3 end = start.add(look.scale(reach));
 
                 for (LivingEntity victim : hitSet) {
-                    victim.invulnerableTime = 0;
-                    victim.hurt(src, damage);
+                    // Daño directo — bypasea absorción, resistencias y mods de defensa
+                    applyDirectDamage(victim, damage);
+
+                    // Knockback hacia adelante y hacia abajo (slam)
                     Vec3 push = look.scale(2.8).add(0, -1.5, 0);
                     victim.setDeltaMovement(push);
                     victim.hurtMarked = true;
                     victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false));
                 }
 
+                // Partículas del rayo cuadrado (Kikoho)
                 for (int i = 0; i < 80; i++) {
                     double t  = i / 80.0;
-                    Vec3 pos  = start.add(look.scale(t * reach));
-                    double ox = (Math.random() - 0.5) * 5.0;
-                    double oy = (Math.random() - 0.5) * 5.0;
+                    Vec3   pos = start.add(look.scale(t * reach));
+                    double ox  = (Math.random() - 0.5) * 5.0;
+                    double oy  = (Math.random() - 0.5) * 5.0;
                     serverLevel.sendParticles(ParticleTypes.FLASH,
                             pos.x, pos.y, pos.z, 1, ox * 0.1, oy * 0.1, ox * 0.1, 0.01);
                 }
-
                 serverLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
                         end.x, end.y, end.z, 4, 1.5, 1.5, 1.5, 0.2);
-
                 serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                         start.x, start.y + 1, start.z, 60, 0.3, 0.3, 0.3, 1.2);
 
@@ -99,5 +104,48 @@ public class KikohoC2S {
             });
         });
         ctx.setPacketHandled(true);
+    }
+
+    /**
+     * Aplica daño directo a la HP real, bypaseando absorción, resistencias y
+     * cualquier mod que modifique el daño recibido.
+     * Método: quitar absorción primero, luego setHealth directamente.
+     */
+    static void applyDirectDamage(LivingEntity entity, float amount) {
+        // 1. Consumir absorción primero si existe
+        float absorption = entity.getAbsorptionAmount();
+        if (absorption > 0) {
+            float absorbed = Math.min(absorption, amount);
+            entity.setAbsorptionAmount(absorption - absorbed);
+            amount -= absorbed;
+        }
+        if (amount <= 0) return;
+
+        // 2. Reducir HP directamente — bypasea armadura, resistencia mágica y mods
+        float newHp = Math.max(0.0f, entity.getHealth() - amount);
+        entity.setHealth(newHp);
+
+        // 3. Si quedó en 0, matar con void damage (no triggerea totem)
+        if (newHp <= 0.0f) {
+            entity.hurt(entity.level().damageSources().fellOutOfWorld(), Float.MAX_VALUE);
+        }
+
+        entity.invulnerableTime = 0;
+        entity.hurtMarked = true;
+    }
+
+    /**
+     * Aplica costo de HP al jugador directamente (no tótem, no absorción).
+     */
+    static void applyDirectHp(ServerPlayer player, float amount) {
+        float absorption = player.getAbsorptionAmount();
+        if (absorption > 0) {
+            float absorbed = Math.min(absorption, amount);
+            player.setAbsorptionAmount(absorption - absorbed);
+            amount -= absorbed;
+        }
+        if (amount <= 0) return;
+        float newHp = Math.max(0.5f, player.getHealth() - amount); // mínimo 0.5 — no mata al caster
+        player.setHealth(newHp);
     }
 }

@@ -1,6 +1,7 @@
 package com.dmzkiaddon.network.packets;
 
 import com.dmzkiaddon.config.AddonConfig;
+import com.dmzkiaddon.network.packets.KikohoC2S;
 import com.dragonminez.common.stats.StatsCapability;
 import com.dragonminez.common.stats.StatsProvider;
 import net.minecraft.core.particles.ParticleTypes;
@@ -99,17 +100,16 @@ public class FinalExplosionC2S {
                         e -> !e.equals(player) && e.isAlive());
 
                 for (LivingEntity victim : victims) {
-                    // Daño mágico — ignora armadura, resistencia y Ki Shield
-                    victim.invulnerableTime = 0;
-                    victim.hurt(player.damageSources().magic(), nukeDamage);
+                    // Daño directo — bypasea absorción, armadura, resistencia y mods de defensa
+                    KikohoC2S.applyDirectDamage(victim, nukeDamage);
 
-                    // Knockback físico real: más fuerte en el centro, decae con la distancia
+                    // Knockback radial — más fuerte en el centro, decae con la distancia
                     double dist     = victim.distanceTo(player);
                     double strength = (1.0 - (dist / radius)) * 3.5;
                     net.minecraft.world.phys.Vec3 push = victim.position()
                             .subtract(player.position()).normalize().scale(strength);
-                    victim.setDeltaMovement(push.x, push.y + 0.5, push.z); // +0.5 → vuelan hacia arriba
-                    victim.hurtMarked = true; // fuerza sync del movimiento al cliente
+                    victim.setDeltaMovement(push.x, push.y + 0.5, push.z);
+                    victim.hurtMarked = true;
                 }
 
                 // ── 5. Destrucción de bloques (respeta el gamerule mobGriefing) ──

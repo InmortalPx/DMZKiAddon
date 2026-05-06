@@ -5,6 +5,7 @@ import com.dmzkiaddon.client.ScreenEffects;
 import com.dmzkiaddon.command.KiAddonCommand;
 import com.dmzkiaddon.config.AddonConfig;
 import com.dmzkiaddon.network.AddonNetworkHandler;
+import com.dmzkiaddon.network.packets.HakaiHandler;
 import com.dmzkiaddon.registry.ModSounds;
 import com.dmzkiaddon.registry.ModEntities;
 import com.dmzkiaddon.world.MasterSpawnManager;
@@ -40,13 +41,14 @@ public class DMZKiAddon {
         ModEntities.ENTITY_TYPES.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
-
-        // Register MasterSpawnManager on the Forge event bus (handles LevelEvent.Load)
         MinecraftForge.EVENT_BUS.register(MasterSpawnManager.class);
+        MinecraftForge.EVENT_BUS.register(HakaiHandler.class);
 
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             MinecraftForge.EVENT_BUS.register(KeyHandler.class);
             MinecraftForge.EVENT_BUS.register(ScreenEffects.class);
+            MinecraftForge.EVENT_BUS.register(com.dmzkiaddon.client.KiParticleEngine.class);
+            MinecraftForge.EVENT_BUS.register(com.dmzkiaddon.client.FinalExplosionRingRenderer.class);
         });
 
         String addonVersion = ModList.get().getModFileById(MOD_ID)

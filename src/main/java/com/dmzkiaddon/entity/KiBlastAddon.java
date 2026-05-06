@@ -2,6 +2,7 @@ package com.dmzkiaddon.entity;
 
 import com.dmzkiaddon.network.AddonNetworkHandler;
 import com.dmzkiaddon.network.packets.ImpactShakeS2C;
+import com.dmzkiaddon.network.packets.KiImpactS2C;
 import com.dragonminez.common.init.MainEntities;
 import com.dragonminez.common.init.entities.ki.KiBlastEntity;
 import net.minecraft.core.particles.ParticleTypes;

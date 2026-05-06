@@ -1,22 +1,18 @@
 package com.dmzkiaddon.entity;
 
+import com.dmzkiaddon.client.KiParticleEngine;
 import com.dragonminez.common.init.MainEntities;
 import com.dragonminez.common.init.entities.MastersEntity;
 import com.dragonminez.common.init.entities.ki.AbstractKiProjectile;
-import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
+import java.awt.Color;
 
 public class HellzoneGrenadeEntity extends AbstractKiProjectile {
 
     public enum Phase { ORBIT, CONVERGE, CONVERGE_POINT }
-
-    private static final Vector3f COLOR_MAIN   = new Vector3f(0.3f, 0.8f, 0.3f);
-    private static final Vector3f COLOR_BRIGHT = new Vector3f(0.8f, 1.0f, 0.8f);
 
     private static final double CONVERGE_SPEED_MAX = 0.776;
     private static final float  ORBIT_SPEED        = 0.05f;
@@ -107,7 +103,9 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
         this.setDeltaMovement(Vec3.ZERO);
         this.setPos(x, y, z);
 
-        spawnOrbitParticles();
+        if (this.level().isClientSide()) {
+            KiParticleEngine.spawnHellzoneOrbit(this.level(), this.position());
+        }
     }
 
     private void tickConverge() {
@@ -120,14 +118,20 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
         Vec3 toTarget = new Vec3(targetX - this.getX(), targetY - this.getY(), targetZ - this.getZ());
         double dist = toTarget.length();
 
-        if (dist < 0.8) {
+        boolean hitByAABB = target.getBoundingBox().inflate(0.5).contains(this.position());
+        boolean hitByDist = dist < 1.2;
+
+        if (this.level().isClientSide()) {
+            KiParticleEngine.spawnKiTrail(this.level(), this.position(), new Color(76, 204, 76), 0.6f);
+        }
+
+        if (hitByAABB || hitByDist) {
             if (!this.level().isClientSide()) {
                 if (!(target instanceof MastersEntity)) {
                     target.hurt(this.level().damageSources().fellOutOfWorld(), kiDamage);
                 }
                 this.level().explode(this, this.getX(), this.getY(), this.getZ(),
                         1.5f, false, explosionInteraction);
-                spawnImpactParticles();
             }
             this.discard();
             return;
@@ -148,11 +152,14 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
                 targetPoint.z - this.getZ());
         double dist = toPoint.length();
 
+        if (this.level().isClientSide()) {
+            KiParticleEngine.spawnKiTrail(this.level(), this.position(), new Color(76, 204, 76), 0.6f);
+        }
+
         if (dist < 0.8) {
             if (!this.level().isClientSide()) {
                 this.level().explode(this, this.getX(), this.getY(), this.getZ(),
                         1.5f, false, explosionInteraction);
-                spawnImpactParticles();
             }
             this.discard();
             return;
@@ -164,21 +171,11 @@ public class HellzoneGrenadeEntity extends AbstractKiProjectile {
         this.setPos(this.getX() + velocity.x, this.getY() + velocity.y, this.getZ() + velocity.z);
     }
 
-    private void spawnOrbitParticles() {
-        if (!(this.level() instanceof ServerLevel serverLevel)) return;
-        serverLevel.sendParticles(
-                new DustParticleOptions(COLOR_MAIN, 0.5f),
-                this.getX(), this.getY(), this.getZ(),
-                2, 0.05, 0.05, 0.05, 0);
-    }
-
-    private void spawnImpactParticles() {
-        if (!(this.level() instanceof ServerLevel serverLevel)) return;
-        for (int i = 0; i < 12; i++) {
-            serverLevel.sendParticles(
-                    new DustParticleOptions(COLOR_BRIGHT, 0.8f),
-                    this.getX(), this.getY(), this.getZ(),
-                    1, 0.3, 0.3, 0.3, 0.1);
+    @Override
+    public void remove(RemovalReason reason) {
+        if (this.level().isClientSide() && reason == RemovalReason.DISCARDED) {
+            KiParticleEngine.spawnKiExplosion(this.level(), this.position(), new Color(76, 204, 76), 0.8f);
         }
+        super.remove(reason);
     }
 }

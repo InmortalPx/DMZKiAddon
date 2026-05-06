@@ -10,19 +10,12 @@ import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/**
- * Handles all client-side screen effects: camera shake, flash overlay,
- * HUD charge bar, and Hakai minigame bar.
- */
 @OnlyIn(Dist.CLIENT)
 public class ScreenEffects {
 
-    // --- Camera Shake ---
     private static int shakeTimer = 0;
     private static int shakeDuration = 0;
     private static float shakeIntensity = 0f;
-
-    // --- Charge HUD ---
     private static boolean isCharging = false;
     private static float chargeProgress = 0f;
     private static float chargeR = 1f, chargeG = 1f, chargeB = 1f;
@@ -30,65 +23,48 @@ public class ScreenEffects {
     private static int baseCost = 0;
     private static int maxKi = 0;
     private static int currentKi = 0;
-
-    // --- Flash overlay ---
     private static int flashTimer = 0;
     private static float flashAlpha = 0f;
-
-    // --- Hakai minigame ---
     private static boolean hakaiActive = false;
     private static float hakaiMyProgress = 0f;
     private static float hakaiEnemyProgress = 0f;
     private static int hakaiFlashTimer = 0;
     private static boolean hakaiWon = false;
-
-    // --- Time-Skip (Hit) overlay ---
-    /** Ticks restantes del efecto de tiempo congelado (overlay morado). */
     private static int timeSkipTimer = 0;
-    private static final int TIME_SKIP_DURATION = 100; // 5 segundos
-
-    // --- Point Pressure aura ---
+    private static final int TIME_SKIP_DURATION = 100;
     private static int pointPressureAuraTimer = 0;
-    private static final int POINT_PRESSURE_AURA_DURATION = 18; // ~0.9 segundos
+    private static final int POINT_PRESSURE_AURA_DURATION = 18;
+    private static int finalExplosionVit = 0;
+    private static float finalExplosionDmg = 0f;
+    private static boolean isFinalExplosion = false;
+    private static int kikohoFlashTimer = 0;
+    private static int neoKikohoCombo = 0;
 
-    // --- Final Explosion HUD ---
-    private static int finalExplosionVit     = 0;
-    private static float finalExplosionDmg   = 0f;
-    private static boolean isFinalExplosion  = false;
-
-    // --- Kikoho orange flash ---
-    private static int kikohoFlashTimer      = 0;
-
-    // --- Neo Kikoho darkness ---
-    private static int neoKikohoCombo        = 0;
-
-    /** Resetea todos los efectos visuales — llamar en respawn para evitar shake infinito. */
     public static void resetAllEffects() {
-        shakeTimer        = 0;
-        shakeDuration     = 0;
-        shakeIntensity    = 0f;
-        flashTimer        = 0;
-        flashAlpha        = 0f;
-        timeSkipTimer     = 0;
+        shakeTimer = 0;
+        shakeDuration = 0;
+        shakeIntensity = 0f;
+        flashTimer = 0;
+        flashAlpha = 0f;
+        timeSkipTimer = 0;
         pointPressureAuraTimer = 0;
-        isCharging        = false;
-        isFinalExplosion  = false;
-        attackName        = "";
-        chargeProgress    = 0f;
+        isCharging = false;
+        isFinalExplosion = false;
+        attackName = "";
+        chargeProgress = 0f;
     }
 
-    /** Activa el HUD de Final Explosion mostrando VIT y daño estimado en lugar de Ki. */
     public static void setFinalExplosionStats(int vit, float estimatedDamage) {
         finalExplosionVit = vit;
         finalExplosionDmg = estimatedDamage;
-        isFinalExplosion  = true;
     }
 
     public static boolean isFinalExplosionCharging() {
-        return isCharging && isFinalExplosion;
+        return isCharging && isFinalExplosion && attackName.equals("Final Explosion");
     }
 
     public static int getFinalExplosionChargeTick() {
+        if (!isFinalExplosionCharging()) return 0;
         return (int)(chargeProgress * 80);
     }
 
@@ -115,22 +91,18 @@ public class ScreenEffects {
         shakeTimer = duration;
     }
 
-    /** Activa el overlay de tiempo congelado (Time-Skip de Hit). */
     public static void triggerTimeSkip() {
         timeSkipTimer = TIME_SKIP_DURATION;
     }
 
-    /** Activa el aura morada + estela del Vital Point Strike. */
     public static void triggerPointPressureAura() {
         pointPressureAuraTimer = POINT_PRESSURE_AURA_DURATION;
     }
 
-    /** True mientras el aura de Point Pressure esté activa (para spawnear partículas en KeyHandler). */
     public static boolean isPointPressureAuraActive() {
         return pointPressureAuraTimer > 0;
     }
 
-    /** Ticks restantes del aura (0–POINT_PRESSURE_AURA_DURATION). */
     public static int getPointPressureAuraTicks() {
         return pointPressureAuraTimer;
     }
@@ -144,6 +116,12 @@ public class ScreenEffects {
         attackName = name;
         baseCost = kiBaseCost;
 
+        if (name.equals("Final Explosion")) {
+            isFinalExplosion = true;
+        } else {
+            isFinalExplosion = false;
+        }
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             com.dragonminez.common.stats.StatsProvider.get(
@@ -156,10 +134,10 @@ public class ScreenEffects {
     }
 
     public static void stopCharging() {
-        isCharging       = false;
+        isCharging = false;
         isFinalExplosion = false;
-        attackName       = "";
-        chargeProgress   = 0f;
+        attackName = "";
+        chargeProgress = 0f;
     }
 
     public static void updateHakaiBar(float myProgress, float enemyProgress) {
@@ -178,8 +156,6 @@ public class ScreenEffects {
         return hakaiActive;
     }
 
-    // ===================== Tick =====================
-
     public static void tick() {
         if (shakeTimer > 0) shakeTimer--;
         if (flashTimer > 0) flashTimer--;
@@ -188,8 +164,6 @@ public class ScreenEffects {
         if (pointPressureAuraTimer > 0) pointPressureAuraTimer--;
         if (kikohoFlashTimer > 0) kikohoFlashTimer--;
     }
-
-    // ===================== Events =====================
 
     @SubscribeEvent
     public static void onCameraSetup(ViewportEvent.ComputeCameraAngles event) {
@@ -216,7 +190,6 @@ public class ScreenEffects {
         int screenH = window.getGuiScaledHeight();
         GuiGraphics gfx = event.getGuiGraphics();
 
-        // Flash overlay (Taiyoken)
         if (flashTimer > 0) {
             float fadeProgress = (float) flashTimer / 20f;
             float fade = Math.min(1f, fadeProgress);
@@ -224,14 +197,9 @@ public class ScreenEffects {
             gfx.fill(0, 0, screenW, screenH, color);
         }
 
-        // Time-Skip overlay (Hit) — solo bordes lilas + texto, sin fill de pantalla
         if (timeSkipTimer > 0) {
             int elapsed = TIME_SKIP_DURATION - timeSkipTimer;
-
-            // Fade out en los últimos 15 ticks
             float fade = timeSkipTimer > 15 ? 1.0f : timeSkipTimer / 15.0f;
-
-            // Bordes lilas fijos (no cubren la pantalla)
             int borderAlpha = (int)(fade * 120);
             int borderColor = net.minecraft.util.FastColor.ARGB32.color(
                     borderAlpha, 160, 60, 255);
@@ -241,7 +209,6 @@ public class ScreenEffects {
             gfx.fill(0, 0, screenW, thickness, borderColor);
             gfx.fill(0, screenH - thickness, screenW, screenH, borderColor);
 
-            // Texto "TIME SKIP" solo en el primer segundo
             if (elapsed < 20) {
                 String label = "TIME SKIP";
                 int labelW = mc.font.width(label);
@@ -251,7 +218,6 @@ public class ScreenEffects {
                         net.minecraft.util.FastColor.ARGB32.color(textAlpha, 210, 120, 255), true);
             }
 
-            // Contador esquina superior derecha
             float secsLeft = timeSkipTimer / 20.0f;
             String timer = String.format("%.1fs", secsLeft);
             gfx.drawString(mc.font, Component.literal(timer),
@@ -259,7 +225,6 @@ public class ScreenEffects {
                     net.minecraft.util.FastColor.ARGB32.color((int)(fade * 200), 200, 150, 255), true);
         }
 
-        // Kikoho — bordes naranjas en los 4 lados
         if (kikohoFlashTimer > 0) {
             float fade = (float) kikohoFlashTimer / 12.0f;
             int borderAlpha = (int)(fade * 180);
@@ -271,26 +236,28 @@ public class ScreenEffects {
             gfx.fill(0, screenH - thickness, screenW, screenH, borderColor);
         }
 
-        // Neo Kikoho — pulso rojo fijo en bordes, alpha constante sin acumulación
         if (neoKikohoCombo > 0) {
-            int vigAlpha = 140; // fijo — no crece con el combo
+            int vigAlpha = 140;
             int vigColor = net.minecraft.util.FastColor.ARGB32.color(vigAlpha, 200, 0, 0);
-            int vt = 12; // grosor fijo de 12px siempre
+            int vt = 12;
             gfx.fill(0, 0, vt, screenH, vigColor);
             gfx.fill(screenW - vt, 0, screenW, screenH, vigColor);
             gfx.fill(0, 0, screenW, vt, vigColor);
             gfx.fill(0, screenH - vt, screenW, screenH, vigColor);
+            
+            String comboText = "COMBO x" + neoKikohoCombo;
+            int textW = mc.font.width(comboText);
+            gfx.drawString(mc.font, Component.literal(comboText),
+                    screenW / 2 - textW / 2, screenH / 2 + 20,
+                    net.minecraft.util.FastColor.ARGB32.color(255, 255, 100, 0), true);
         }
 
-        // Charge color vignette — bordes del color del ataque mientras se carga
-        if (isCharging && chargeProgress > 0.15f) {
+        if (isCharging && chargeProgress > 0.15f && !isFinalExplosion) {
             int r = (int)(chargeR * 255);
             int g = (int)(chargeG * 255);
             int b = (int)(chargeB * 255);
-            // Alpha crece suavemente con la carga: 0 → 120
             int vigAlpha = (int)(Math.min(chargeProgress, 0.85f) * 120);
             int vigColor = net.minecraft.util.FastColor.ARGB32.color(vigAlpha, r, g, b);
-            // Grosor crece de 4 a 18px con la carga
             int vt = 4 + (int)(chargeProgress * 14);
             gfx.fill(0, 0, vt, screenH, vigColor);
             gfx.fill(screenW - vt, 0, screenW, screenH, vigColor);
@@ -298,18 +265,15 @@ public class ScreenEffects {
             gfx.fill(0, screenH - vt, screenW, screenH, vigColor);
         }
 
-        // Hakai minigame bar
         if (hakaiActive) {
             renderHakaiBar(gfx, mc, screenW, screenH);
         }
 
-        // Charge HUD bar
         if (isCharging && !attackName.isEmpty()) {
-            // Actualizar ki en cada frame
             com.dragonminez.common.stats.StatsProvider.get(
                     com.dragonminez.common.stats.StatsCapability.INSTANCE, mc.player)
                     .ifPresent(stats -> {
-                        maxKi     = stats.getMaxEnergy();
+                        maxKi = stats.getMaxEnergy();
                         currentKi = stats.getResources().getCurrentEnergy();
                     });
 
@@ -317,8 +281,6 @@ public class ScreenEffects {
             int barY = screenH - 40;
             int barW = 120;
             int barH = 8;
-
-            // La barra se llena según el progreso de carga (0 → 100%)
             int fillW = (int)(barW * chargeProgress);
 
             int colorAtaque = net.minecraft.util.FastColor.ARGB32.color(200,
@@ -337,7 +299,6 @@ public class ScreenEffects {
                         Component.literal("DMG: ~" + estimatedDmg),
                         hudX + barW + 4, barY + 2, 0xFFFF4444, true);
             } else {
-                // Costo real = mismo cálculo que el servidor: maxKi * pct/100 * (1 + chargeProgress)
                 int realCost = (int)(maxKi * (baseCost / 100f) * (1f + chargeProgress));
                 int costColor = (realCost > currentKi && currentKi > 0) ? 0xFFFF4444 : 0xFFFFFFFF;
                 gfx.drawString(mc.font, Component.literal("Ki: " + realCost),
@@ -353,31 +314,25 @@ public class ScreenEffects {
         int barH = 10;
         int halfW = barTotalW / 2;
 
-        // Background
         gfx.fill(barX, barY, barX + barTotalW, barY + barH, 0xAA000000);
 
-        // My progress (blue, left side)
         int myFill = (int)(halfW * hakaiMyProgress);
         gfx.fill(barX, barY, barX + myFill, barY + barH, 0xFF3399FF);
 
-        // Enemy progress (red, right side)
         int enemyBarX = barX + halfW;
         int enemyFill = (int)(halfW * hakaiEnemyProgress);
         gfx.fill(enemyBarX + halfW - enemyFill, barY, enemyBarX + halfW, barY + barH, 0xFFFF3333);
 
-        // Label
         String label = Component.translatable("msg.dmzkiaddon.hakai_label").getString();
         int labelW = mc.font.width(label);
         gfx.drawString(mc.font, Component.literal(label), screenW / 2 - labelW / 2, barY - 14, 0xFFFFD700, true);
 
-        // Hint
-        String hint  = Component.translatable("msg.dmzkiaddon.hakai_hint").getString();
+        String hint = Component.translatable("msg.dmzkiaddon.hakai_hint").getString();
         int hintW = mc.font.width(hint);
         gfx.drawString(mc.font, Component.literal(hint), screenW / 2 - hintW / 2, barY + barH + 4, 0xFFFFFFFF, true);
     }
 
     public static void updateHUD(int cooldown, float r, float g, float b, String name, int cost) {
-        // Called from KeyHandler to pass HUD data each tick while charging
         chargeR = r;
         chargeG = g;
         chargeB = b;

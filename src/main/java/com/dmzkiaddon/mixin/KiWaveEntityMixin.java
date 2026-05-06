@@ -18,6 +18,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
+import com.dmzkiaddon.network.AddonNetworkHandler;
+import com.dmzkiaddon.network.packets.KiImpactS2C;
+import net.minecraftforge.network.PacketDistributor;
 
 @Mixin(value = KiWaveEntity.class, remap = false)
 public abstract class KiWaveEntityMixin {
@@ -49,6 +52,11 @@ public abstract class KiWaveEntityMixin {
                     (double) self.getColorBorde(), (double)(radius * 0.8f), 0.0D, 1.0D);
             serverLevel.sendParticles(MainParticles.KI_EXPLOSION_SPLASH.get(),
                     pos.x, pos.y, pos.z, 6, radius * 0.4, radius * 0.4, radius * 0.4, 0.15);
+
+            // Burst Lodestone en el cliente
+            KiImpactS2C pkt = new KiImpactS2C(pos.x, pos.y, pos.z,
+                    self.getColor(), self.getSize(), KiImpactS2C.ImpactType.WAVE);
+            serverLevel.players().forEach(p -> AddonNetworkHandler.sendToPlayer(pkt, p));
         }
 
         // 3. Sonido de impacto potente

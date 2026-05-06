@@ -1,5 +1,9 @@
 package com.dmzkiaddon.client;
 
+import com.dmzkiaddon.client.model.KiBallModel;
+import com.dmzkiaddon.client.model.KiBeamModel;
+import com.dmzkiaddon.client.renderer.KiBlastRenderer;
+import com.dmzkiaddon.client.renderer.KiWaveRenderer;
 import com.dmzkiaddon.client.renderer.MasterFriezaRenderer;
 import com.dmzkiaddon.client.renderer.MasterHitRenderer;
 import com.dmzkiaddon.client.renderer.MasterPiccoloRenderer;
@@ -23,19 +27,19 @@ public class ClientSetup {
 
     public static final String CATEGORY = "key.categories.dmzkiaddon";
 
-    public static final KeyMapping KEY_FIRE             = registerKey("fire",             InputConstants.KEY_R);
-    public static final KeyMapping KEY_ATTACK_PREV      = registerKey("attack_prev",      InputConstants.KEY_LBRACKET);
-    public static final KeyMapping KEY_ATTACK_NEXT      = registerKey("attack_next",      InputConstants.KEY_RBRACKET);
-    public static final KeyMapping KEY_KI_SHIELD        = registerKey("ki_shield",        -1);
-    public static final KeyMapping KEY_HELLZONE         = registerKey("hellzone",         -1);
-    public static final KeyMapping KEY_HAKAI_SPAM       = registerKey("hakai_spam",       InputConstants.KEY_SPACE);
-    public static final KeyMapping KEY_HAKAI            = registerKey("hakai",            -1);
-    public static final KeyMapping KEY_TAIYOKEN         = registerKey("taiyoken",         -1);
-    public static final KeyMapping KEY_TIME_SKIP        = registerKey("time_skip",        -1);
-    public static final KeyMapping KEY_POINT_PRESSURE   = registerKey("point_pressure",   -1);
-    public static final KeyMapping KEY_FINAL_EXPLOSION  = registerKey("final_explosion",  -1);
-    public static final KeyMapping KEY_KIKOHO           = registerKey("kikoho",           -1);
-    public static final KeyMapping KEY_NEO_KIKOHO       = registerKey("neo_kikoho",       -1);
+    public static final KeyMapping KEY_FIRE = registerKey("fire", InputConstants.KEY_R);
+    public static final KeyMapping KEY_ATTACK_PREV = registerKey("attack_prev", InputConstants.KEY_LBRACKET);
+    public static final KeyMapping KEY_ATTACK_NEXT = registerKey("attack_next", InputConstants.KEY_RBRACKET);
+    public static final KeyMapping KEY_KI_SHIELD = registerKey("ki_shield", -1);
+    public static final KeyMapping KEY_HELLZONE = registerKey("hellzone", -1);
+    public static final KeyMapping KEY_HAKAI_SPAM = registerKey("hakai_spam", InputConstants.KEY_SPACE);
+    public static final KeyMapping KEY_HAKAI = registerKey("hakai", -1);
+    public static final KeyMapping KEY_TAIYOKEN = registerKey("taiyoken", -1);
+    public static final KeyMapping KEY_TIME_SKIP = registerKey("time_skip", -1);
+    public static final KeyMapping KEY_POINT_PRESSURE = registerKey("point_pressure", -1);
+    public static final KeyMapping KEY_FINAL_EXPLOSION = registerKey("final_explosion", -1);
+    public static final KeyMapping KEY_KIKOHO = registerKey("kikoho", InputConstants.KEY_X);
+    public static final KeyMapping KEY_NEO_KIKOHO = registerKey("neo_kikoho", InputConstants.KEY_Z);
 
     private static KeyMapping registerKey(String name, int defaultKeyCode) {
         return new KeyMapping(
@@ -65,12 +69,20 @@ public class ClientSetup {
     }
 
     @SubscribeEvent
+    public static void registerLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(KiBallModel.LAYER_LOCATION, KiBallModel::createBodyLayer);
+        event.registerLayerDefinition(KiBeamModel.LAYER_LOCATION, KiBeamModel::createBodyLayer);
+    }
+
+    @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         KiWaveAddon.prewarmAccessors();
-        event.registerEntityRenderer(ModEntities.MASTER_VEGETA.get(),       MasterVegetaRenderer::new);
-        event.registerEntityRenderer(ModEntities.MASTER_PICCOLO.get(),      MasterPiccoloRenderer::new);
-        event.registerEntityRenderer(ModEntities.MASTER_FRIEZA.get(),       MasterFriezaRenderer::new);
-        event.registerEntityRenderer(ModEntities.MASTER_TENSHINHAN.get(),   MasterTenshinhanRenderer::new);
-        event.registerEntityRenderer(ModEntities.MASTER_HIT.get(),          MasterHitRenderer::new);
+        event.registerEntityRenderer(ModEntities.KI_BLAST_ADDON.get(), KiBlastRenderer::new);
+        event.registerEntityRenderer(ModEntities.KI_WAVE_ADDON.get(),  KiWaveRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_VEGETA.get(), MasterVegetaRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_PICCOLO.get(), MasterPiccoloRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_FRIEZA.get(), MasterFriezaRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_TENSHINHAN.get(), MasterTenshinhanRenderer::new);
+        event.registerEntityRenderer(ModEntities.MASTER_HIT.get(), MasterHitRenderer::new);
     }
 }

@@ -22,9 +22,9 @@ public class FinalExplosionRingRenderer {
             ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/entity/final_explosion_ring.png");
 
     private static final int TOTAL_FRAMES = 47;
-    private static final int PHASE_1_END  = 60;
-    private static final int PHASE_2_END  = 80;
-    private static final int NUM_PLANES   = 12;
+    private static final int PHASE_1_END = 60;
+    private static final int PHASE_2_END = 80;
+    private static final int NUM_PLANES = 12;
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -34,32 +34,32 @@ public class FinalExplosionRingRenderer {
         if (mc.player == null) return;
         if (!ScreenEffects.isFinalExplosionCharging()) return;
 
-        int tick     = ScreenEffects.getFinalExplosionChargeTick();
+        int tick = ScreenEffects.getFinalExplosionChargeTick();
         float progress = Math.min(1.0f, tick / 80.0f);
 
         float alpha, radius, spriteH;
         if (tick <= PHASE_1_END) {
-            alpha   = 0.4f + progress * 0.5f;
-            radius  = 1.2f + progress * 0.8f;
+            alpha = 0.4f + progress * 0.5f;
+            radius = 1.2f + progress * 0.8f;
             spriteH = 1.2f + progress * 0.6f;
         } else {
-            float t  = (tick - PHASE_1_END) / (float)(PHASE_2_END - PHASE_1_END);
-            alpha    = 0.9f + t * 0.1f;
-            radius   = 2.0f + t * 1.0f;
-            spriteH  = 1.8f + t * 0.8f;
+            float t = (tick - PHASE_1_END) / (float)(PHASE_2_END - PHASE_1_END);
+            alpha = 0.9f + t * 0.1f;
+            radius = 2.0f + t * 1.0f;
+            spriteH = 1.8f + t * 0.8f;
         }
 
         if (tick >= PHASE_2_END - 3 && tick < PHASE_2_END) {
             float shrink = 1.0f - ((tick - (PHASE_2_END - 3)) / 3.0f) * 0.5f;
-            radius  *= shrink;
+            radius *= shrink;
             spriteH *= shrink;
         }
 
-        long ms      = System.currentTimeMillis();
-        int frame    = (int)((ms / 50) % TOTAL_FRAMES);
+        long ms = System.currentTimeMillis();
+        int frame = (int)((ms / 50) % TOTAL_FRAMES);
         float frameH = 1.0f / TOTAL_FRAMES;
-        float vMin   = frame * frameH;
-        float vMax   = vMin + frameH;
+        float vMin = frame * frameH;
+        float vMax = vMin + frameH;
 
         Player player = mc.player;
         float partial = event.getPartialTick();
@@ -80,8 +80,8 @@ public class FinalExplosionRingRenderer {
 
         for (int i = 0; i < NUM_PLANES; i++) {
             double angle = (Math.PI * 2.0 / NUM_PLANES) * i + (ms * 0.001);
-            double cx    = px + Math.cos(angle) * radius;
-            double cz    = pz + Math.sin(angle) * radius;
+            double cx = px + Math.cos(angle) * radius;
+            double cz = pz + Math.sin(angle) * radius;
 
             PoseStack ps = event.getPoseStack();
             double arcWidth = (2.0 * Math.PI * radius / NUM_PLANES) * 1.6f;
@@ -99,8 +99,8 @@ public class FinalExplosionRingRenderer {
             Matrix4f mat = ps.last().pose();
 
             buf.vertex(mat, -0.5f, 0f, 0f).uv(0f, vMax).color(r, g, b, a).endVertex();
-            buf.vertex(mat,  0.5f, 0f, 0f).uv(1f, vMax).color(r, g, b, a).endVertex();
-            buf.vertex(mat,  0.5f, 1f, 0f).uv(1f, vMin).color(r, g, b, a).endVertex();
+            buf.vertex(mat, 0.5f, 0f, 0f).uv(1f, vMax).color(r, g, b, a).endVertex();
+            buf.vertex(mat, 0.5f, 1f, 0f).uv(1f, vMin).color(r, g, b, a).endVertex();
             buf.vertex(mat, -0.5f, 1f, 0f).uv(0f, vMin).color(r, g, b, a).endVertex();
 
             Tesselator.getInstance().end();

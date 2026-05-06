@@ -34,11 +34,24 @@ public class InitiateHakaiC2S {
 
             StatsProvider.get(StatsCapability.INSTANCE, attacker).ifPresent(stats -> {
                 int energy = stats.getResources().getCurrentEnergy();
-                int cost   = (int)(stats.getMaxEnergy() * (AddonConfig.getCostPercentage(FireKiAttackC2S.AttackType.HAKAI) / 100f));
-                if (energy < cost) return;
+                int cost = (int)(stats.getMaxEnergy() * (AddonConfig.getCostPercentage(FireKiAttackC2S.AttackType.HAKAI) / 100f));
+                
+                if (energy < cost) {
+                    attacker.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cNo tienes suficiente Ki para Hakai"));
+                    return;
+                }
 
                 Entity targetEntity = attacker.level().getEntity(packet.targetEntityId);
-                if (!(targetEntity instanceof LivingEntity target) || !target.isAlive()) return;
+                
+                if (targetEntity == null) {
+                    attacker.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cNo hay objetivo válido"));
+                    return;
+                }
+                
+                if (!(targetEntity instanceof LivingEntity target) || !target.isAlive()) {
+                    attacker.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cEl objetivo no es válido"));
+                    return;
+                }
 
                 boolean handledAsPlayer = false;
                 if (target instanceof ServerPlayer defender) {
@@ -50,6 +63,7 @@ public class InitiateHakaiC2S {
                 }
 
                 stats.getResources().setCurrentEnergy(energy - cost);
+                attacker.sendSystemMessage(net.minecraft.network.chat.Component.literal("§5¡Hakai iniciado!"));
             });
         });
         ctx.setPacketHandled(true);
